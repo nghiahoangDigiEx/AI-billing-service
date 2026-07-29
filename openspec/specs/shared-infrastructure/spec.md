@@ -112,3 +112,45 @@ The system SHALL remove default NestJS scaffold files that are not part of the a
 - **WHEN** AppModule is loaded
 - **THEN** no imports reference deleted scaffold files
 - **AND** the application starts without errors
+
+### Requirement: Standard API Response Format
+The system SHALL provide a standard API response interface in src/common/interfaces/api-response.interface.ts. All API responses SHALL follow a consistent structure for both success and error cases.
+
+#### Scenario: Success response structure
+- **WHEN** an API endpoint returns successfully
+- **THEN** the response follows the structure: `{ success: true, data?: T, message?: string }`
+- **AND** the response type is ApiResponse<T>
+
+#### Scenario: Error response structure
+- **WHEN** an API endpoint encounters an error
+- **THEN** the response follows the structure: `{ success: false, error: ErrorCode, message: string, details?: any }`
+- **AND** the error field uses a typed ErrorCode enum value
+
+### Requirement: ErrorCode Enum
+The system SHALL define an ErrorCode enum in src/common/enums/error-code.enum.ts with typed error codes for consistent error handling across the application.
+
+#### Scenario: ErrorCode enum exists with common error codes
+- **WHEN** the project is initialized
+- **THEN** src/common/enums/error-code.enum.ts exists
+- **AND** exports ErrorCode enum with values like INTERNAL_ERROR, VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED, FORBIDDEN
+- **AND** error codes use UPPER_SNAKE_CASE naming convention
+
+#### Scenario: ErrorCode is used in exception handling
+- **WHEN** an exception is caught by GlobalExceptionFilter
+- **THEN** the error response includes a typed ErrorCode value
+- **AND** the error code corresponds to the exception type
+
+### Requirement: Common Infrastructure Files
+The system SHALL create base infrastructure files in src/common/ subdirectories. Directories SHALL contain at least an index.ts barrel file for future exports.
+
+#### Scenario: Common subdirectories contain index files
+- **WHEN** the base source code is set up
+- **THEN** src/common/decorators/index.ts exists
+- **AND** src/common/guards/index.ts exists
+- **AND** src/common/enums/index.ts exists
+- **AND** src/common/interfaces/index.ts exists
+
+#### Scenario: Barrel files export empty initially
+- **WHEN** the base source code is set up
+- **THEN** index.ts files exist but may be empty or contain placeholder comments
+- **AND** future decorators, guards, and utilities can be added and exported from these files

@@ -6,7 +6,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Response } from 'express';
+import { ErrorCode } from '../enums';
+import { ApiResponse } from '../interfaces';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -18,6 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
+    let errorCode = ErrorCode.INTERNAL_ERROR;
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -27,6 +31,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ? exceptionResponse
           : (exceptionResponse as { message: string }).message ||
             exception.message;
+      errorCode = this.mapStatusToErrorCode(statusCode);
     } else {
       this.logger.error(
         'Unhandled exception',
@@ -34,10 +39,29 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(statusCode).json({
-      statusCode,
+    const responseBody: ApiResponse = {
+      success: false,
+      error: errorCode,
       message,
-      error: HttpStatus[statusCode] || 'Error',
-    });
+    };
+
+    response.status(statusCode).json(responseBody);
+  }
+
+  private mapStatusToErrorCode(statusCode: number): ErrorCode {
+    switch (statusCode) {
+      case HttpStatus.BAD_REQUEST:
+        return ErrorCode.BAD_REQUEST;
+      case HttpStatus.UNAUTHORIZED:
+        return ErrorCode.UNAUTHORIZED;
+      case HttpStatus.FORBIDDEN:
+        return ErrorCode.FORBIDDEN;
+      case HttpStatus.NOT_FOUND:
+        return ErrorCode.NOT_FOUND;
+      case HttpStatus.CONFLICT:
+        return ErrorCode.CONFLICT;
+      default:
+        return ErrorCode.INTERNAL_ERROR;
+    }
   }
 }

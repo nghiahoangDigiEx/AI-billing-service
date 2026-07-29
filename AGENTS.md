@@ -102,6 +102,10 @@ Event-driven via EventEmitter2. Modules never call each other's services directl
 
 ## AI Workflow
 
+**Workflow Selection:**
+- Use **opsx-* workflows** (OpenSpec) for new features, complex architectural changes, or when detailed design documents and specs are required before implementation.
+- Use **superpowers-* workflows** for bug fixes, small refactors, direct implementation plans, or tasks that don't require extensive upfront spec writing.
+
 **Before implementation:**
 - Read the relevant OpenSpec change
 - Load the required project skills (see Skill Loading Guidance)
@@ -110,6 +114,7 @@ Event-driven via EventEmitter2. Modules never call each other's services directl
 - Ask for clarification if requirements are ambiguous
 
 **Before completion:**
+- Always run `npm run build` after writing code to ensure it compiles successfully
 - Run required verification commands (lint, typecheck, test)
 - Check affected tests pass
 - Ensure implementation matches the approved specification
@@ -130,6 +135,12 @@ Event-driven via EventEmitter2. Modules never call each other's services directl
 - No cross-module database writes — each module owns its tables exclusively
 
 ---
+
+# AI Development Rules
+
+Before writing code, read:
+- .ai/rules/code-style_and_readability_rules.md
+- .ai/rules/typescript-quality.md
 
 ## Project Conventions
 

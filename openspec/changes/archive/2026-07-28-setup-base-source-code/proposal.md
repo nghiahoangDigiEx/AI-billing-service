@@ -7,6 +7,7 @@ The billing-service project is currently a bare NestJS scaffold with no foundati
 - Add Prisma ORM integration with PostgreSQL (Neon)
 - Configure environment variables via ConfigModule
 - Create shared infrastructure: PrismaService, global exception filter, event constants
+- Add standard API response interface and ErrorCode enum for consistent error handling
 - Establish module directory structure (common, events, modules, prisma)
 - Add core dependencies: @nestjs/config, @nestjs/swagger, class-validator, class-transformer, eventemitter2, @prisma/client, prisma
 - Configure global validation pipe in main.ts

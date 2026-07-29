@@ -61,6 +61,16 @@
 - [x] 9.1 Run npm run lint and fix any issues
 - [x] 9.2 Run npm run typecheck and fix any type errors
 - [x] 9.3 Run npm run build and verify successful compilation
-- [ ] 9.4 Verify application starts with npm run start:dev
-- [ ] 9.5 Verify Swagger UI is accessible at /api
+- [x] 9.4 Verify application starts with npm run start:dev
+- [x] 9.5 Verify Swagger UI is accessible at /api
 - [x] 9.6 Verify Prisma client is generated and accessible
+
+## 10. Common Infrastructure Files
+
+- [x] 10.1 Create src/common/enums/error-code.enum.ts with ErrorCode enum
+- [x] 10.2 Create src/common/enums/index.ts barrel file
+- [x] 10.3 Create src/common/interfaces/api-response.interface.ts with ApiResponse interface
+- [x] 10.4 Create src/common/interfaces/index.ts barrel file
+- [x] 10.5 Create src/common/decorators/index.ts barrel file
+- [x] 10.6 Create src/common/guards/index.ts barrel file
+- [x] 10.7 Update GlobalExceptionFilter to use ErrorCode enum in error responses

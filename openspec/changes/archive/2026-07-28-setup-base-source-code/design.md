@@ -107,7 +107,15 @@ src/
 │   ├── filters/
 │   │   └── global-exception.filter.ts
 │   ├── decorators/
-│   └── guards/
+│   │   └── index.ts
+│   ├── guards/
+│   │   └── index.ts
+│   ├── enums/
+│   │   ├── error-code.enum.ts
+│   │   └── index.ts
+│   └── interfaces/
+│       ├── api-response.interface.ts
+│       └── index.ts
 ├── events/
 │   └── event.constants.ts
 ├── modules/
@@ -228,6 +236,26 @@ export const USER_UPDATED = 'user.updated';
 **Alternative Considered:**
 - Keep scaffold as example
   - Rejected: Unnecessary code, confusing for new developers
+
+### 9. Standard API Response: Typed Response Interface
+
+**Decision:** Create a standard ApiResponse interface and ErrorCode enum in src/common/ for consistent response formatting.
+
+**Rationale:**
+- Consistent response structure across all endpoints
+- Type-safe error codes prevent typos
+- Enables standardized client-side error handling
+- Aligns with AGENTS.md: "Standardized error response format"
+
+**Implementation:**
+- `src/common/interfaces/api-response.interface.ts`: Define ApiResponse<T> interface
+- `src/common/enums/error-code.enum.ts`: Define ErrorCode enum with common error types
+- Update GlobalExceptionFilter to use ErrorCode in error responses
+- Future services can use ApiResponse for consistent return types
+
+**Alternative Considered:**
+- Inline response objects
+  - Rejected: No type safety, inconsistent responses, harder to maintain
 
 ## Risks / Trade-offs
 
