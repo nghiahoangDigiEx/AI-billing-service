@@ -37,6 +37,7 @@ export class UserService {
         email: registerDto.email,
         password: hashedPassword,
         name: registerDto.name,
+        pendingStripeSetup: true,
       },
     });
 
@@ -110,6 +111,7 @@ export class UserService {
           avatar: profile.avatar,
           provider: Provider.GOOGLE,
           providerId: profile.providerId,
+          pendingStripeSetup: true,
         },
       });
       this.eventEmitter.emit(USER_REGISTERED, {

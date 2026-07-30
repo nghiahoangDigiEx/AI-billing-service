@@ -1,0 +1,54 @@
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { ErrorCode } from '../../../common/enums/error-code.enum';
+
+import { User } from '@prisma/client';
+
+interface AuthenticatedRequest {
+  user?: User;
+}
+
+@Injectable()
+export class RequirePaidSubscriptionGuard implements CanActivate {
+  constructor(
+    private reflector: Reflector,
+    private prisma: PrismaService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const user = request.user;
+
+    if (!user) {
+      throw new ForbiddenException(
+        'User not authenticated',
+        ErrorCode.FORBIDDEN,
+      );
+    }
+
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId: user.id,
+        status: 'ACTIVE',
+      },
+      include: {
+        plan: true,
+      },
+    });
+
+    if (!subscription || subscription.plan.slug === 'free') {
+      throw new ForbiddenException(
+        'Paid subscription required',
+        ErrorCode.SUBSCRIPTION_NOT_FOUND,
+      );
+    }
+
+    return true;
+  }
+}

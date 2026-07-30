@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './prisma/prisma.module';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { UserModule } from './modules/user/user.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './modules/user/guards/jwt-auth.guard';
 
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from './modules/user/guards/jwt-auth.guard';
     }),
     PrismaModule,
     UserModule,
+    BillingModule,
   ],
   controllers: [],
   providers: [

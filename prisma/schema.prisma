@@ -17,18 +17,58 @@ enum Provider {
   GOOGLE
 }
 
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+}
+
+enum CreditSource {
+  MONTHLY
+  ADDON
+}
+
+enum CreditStatus {
+  ACTIVE
+  FROZEN
+  EXHAUSTED
+}
+
+enum WebhookEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String?
-  name          String?
-  avatar        String?
-  role          Role           @default(USER)
-  provider      Provider       @default(LOCAL)
-  providerId    String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id                  String            @id @default(uuid())
+  email               String            @unique
+  password            String?
+  name                String?
+  avatar              String?
+  role                Role              @default(USER)
+  provider            Provider          @default(LOCAL)
+  providerId          String?
+  stripeCustomerId    String?           @unique
+  pendingStripeSetup  Boolean           @default(false)
+  retryCount          Int               @default(0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  refreshTokens       RefreshToken[]
+  subscriptions       Subscription[]
+  addonPurchases      AddonPurchase[]
+  creditBalances      CreditBalance[]
 }
 
 model RefreshToken {
@@ -40,4 +80,110 @@ model RefreshToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Plan {
+  id              String       @id @default(uuid())
+  stripeProductId String       @unique
+  name            String
+  slug            String       @unique
+  creditsIncluded Int
+  status          PlanStatus   @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  prices        PlanPrice[]
+  subscriptions Subscription[]
+}
+
+model PlanPrice {
+  id              String          @id @default(uuid())
+  stripePriceId   String          @unique
+  planId          String
+  billingInterval BillingInterval
+  amount          Int
+  currency        String          @default("usd")
+  status          PlanStatus      @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  plan            Plan            @relation(fields: [planId], references: [id])
+  subscriptions   Subscription[]
+
+  @@index([planId])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String
+  planId               String
+  planPriceId          String
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id])
+  plan                 Plan               @relation(fields: [planId], references: [id])
+  planPrice            PlanPrice          @relation(fields: [planPriceId], references: [id])
+
+  @@index([userId, status])
+}
+
+model AddonPackage {
+  id              String          @id @default(uuid())
+  stripeProductId String          @unique
+  stripePriceId   String          @unique
+  name            String
+  credits         Int
+  amount          Int
+  currency        String          @default("usd")
+  status          PlanStatus      @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  purchases       AddonPurchase[]
+}
+
+model AddonPurchase {
+  id                   String       @id @default(uuid())
+  userId               String
+  addonPackageId       String
+  stripePaymentIntentId String      @unique
+  createdAt            DateTime     @default(now())
+  user                 User         @relation(fields: [userId], references: [id])
+  addonPackage         AddonPackage @relation(fields: [addonPackageId], references: [id])
+
+  @@index([userId])
+}
+
+model CreditBalance {
+  id              String       @id @default(uuid())
+  userId          String
+  source          CreditSource
+  sourceRef       String
+  totalCredits    Int
+  remainingCredits Int
+  status          CreditStatus @default(ACTIVE)
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  purchasedAt     DateTime?
+  frozenAt        DateTime?
+  unfrozenAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+}
+
+model WebhookEvent {
+  id            String             @id @default(uuid())
+  stripeEventId String             @unique
+  eventType     String
+  payload       Json
+  status        WebhookEventStatus @default(PENDING)
+  errorMessage  String?
+  processedAt   DateTime?
+  createdAt     DateTime           @default(now())
+
+  @@index([stripeEventId])
 }
