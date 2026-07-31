@@ -34,7 +34,7 @@ describe('UsersController (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'user@test.com', password: 'password123' });
-    accessToken = loginRes.body.accessToken;
+    accessToken = loginRes.body.data.accessToken;
 
     const adminRes = await request(app.getHttpServer())
       .post('/auth/register')
@@ -48,7 +48,7 @@ describe('UsersController (e2e)', () => {
     const adminLoginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin@test.com', password: 'password123' });
-    adminAccessToken = adminLoginRes.body.accessToken;
+    adminAccessToken = adminLoginRes.body.data.accessToken;
   });
 
   afterAll(async () => {
@@ -64,7 +64,7 @@ describe('UsersController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveProperty('email', 'user@test.com');
+          expect(res.body.data).toHaveProperty('email', 'user@test.com');
         });
     });
   });
@@ -76,7 +76,7 @@ describe('UsersController (e2e)', () => {
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .expect(200)
         .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
+          expect(Array.isArray(res.body.data)).toBe(true);
         });
     });
 

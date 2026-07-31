@@ -20,12 +20,10 @@ describe('User Subscriptions API (e2e)', () => {
   beforeAll(async () => {
     mockStripeService = {
       createSubscription: jest.fn().mockResolvedValue({ id: 'sub_mock123' }),
-      createPaymentIntent: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'pi_mock123',
-          client_secret: 'secret_mock123',
-        }),
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: 'pi_mock123',
+        client_secret: 'secret_mock123',
+      }),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -55,7 +53,7 @@ describe('User Subscriptions API (e2e)', () => {
     const userLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'user-sub@example.com', password: 'password123' });
-    userToken = userLogin.body.accessToken;
+    userToken = userLogin.body.data.accessToken;
 
     const user = await prisma.user.findUnique({
       where: { email: 'user-sub@example.com' },
@@ -117,8 +115,8 @@ describe('User Subscriptions API (e2e)', () => {
         .send({ planPriceId })
         .expect(202)
         .expect((res) => {
-          expect(res.body.status).toBe('Accepted');
-          expect(res.body.stripeSubscriptionId).toBe('sub_mock123');
+          expect(res.body.data.status).toBe('Accepted');
+          expect(res.body.data.stripeSubscriptionId).toBe('sub_mock123');
         });
     });
   });
@@ -152,8 +150,8 @@ describe('User Subscriptions API (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200)
         .expect((res) => {
-          expect(res.body.status).toBe('ACTIVE');
-          expect(res.body.stripeSubscriptionId).toBe('sub_mock123');
+          expect(res.body.data.status).toBe('ACTIVE');
+          expect(res.body.data.stripeSubscriptionId).toBe('sub_mock123');
         });
     });
   });
@@ -165,9 +163,9 @@ describe('User Subscriptions API (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200)
         .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-          expect(res.body.length).toBeGreaterThanOrEqual(1);
-          expect(res.body[0].stripeSubscriptionId).toBe('sub_mock123');
+          expect(Array.isArray(res.body.data)).toBe(true);
+          expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+          expect(res.body.data[0].stripeSubscriptionId).toBe('sub_mock123');
         });
     });
   });
@@ -197,7 +195,7 @@ describe('User Subscriptions API (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(202)
         .expect((res) => {
-          expect(res.body).toEqual({
+          expect(res.body.data).toEqual({
             status: 'Accepted',
             paymentIntentId: 'pi_mock123',
             clientSecret: 'secret_mock123',
@@ -234,10 +232,10 @@ describe('User Subscriptions API (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200)
         .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-          expect(res.body.length).toBeGreaterThanOrEqual(1);
-          expect(res.body[0].source).toBe('ADDON');
-          expect(res.body[0].status).toBe('ACTIVE');
+          expect(Array.isArray(res.body.data)).toBe(true);
+          expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+          expect(res.body.data[0].source).toBe('ADDON');
+          expect(res.body.data[0].status).toBe('ACTIVE');
         });
     });
   });
@@ -249,9 +247,9 @@ describe('User Subscriptions API (e2e)', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .expect(200)
         .expect((res) => {
-          expect(Array.isArray(res.body)).toBe(true);
-          expect(res.body.length).toBeGreaterThanOrEqual(1);
-          expect(res.body[0].source).toBe('ADDON');
+          expect(Array.isArray(res.body.data)).toBe(true);
+          expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+          expect(res.body.data[0].source).toBe('ADDON');
         });
     });
   });

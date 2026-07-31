@@ -42,14 +42,19 @@ describe('InvoicePaidStrategy', () => {
   });
 
   it('should handle invoice.paid event', async () => {
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.user.findFirst.mockResolvedValue({ id: 'user_1' });
+
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.planPrice.findFirst.mockResolvedValue({
       id: 'price_1',
       planId: 'plan_1',
       plan: { creditsIncluded: 100 },
     });
+
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.subscription.findFirst.mockResolvedValue({
       id: 'sub_1',

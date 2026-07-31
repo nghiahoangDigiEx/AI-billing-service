@@ -113,7 +113,7 @@ describe('BillingService', () => {
         'prod_123',
         1000,
         'usd',
-        'MONTH',
+        'month',
       );
       expect(prisma.plan.create).toHaveBeenCalled();
     });
@@ -285,7 +285,7 @@ describe('BillingService', () => {
         'prod_123',
         10000,
         'usd',
-        'YEAR',
+        'year',
       );
       expect(prisma.planPrice.create).toHaveBeenCalled();
     });

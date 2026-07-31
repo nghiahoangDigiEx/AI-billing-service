@@ -1,6 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AdminOnlyGuard } from './admin-only.guard';
+import { Role } from '@prisma/client';
 
 describe('AdminOnlyGuard', () => {
   let guard: AdminOnlyGuard;
@@ -30,7 +31,7 @@ describe('AdminOnlyGuard', () => {
     const context = {
       switchToHttp: () => ({
         getRequest: () => ({
-          user: { role: 'USER' },
+          user: { role: Role.USER },
         }),
       }),
     } as ExecutionContext;
@@ -43,7 +44,7 @@ describe('AdminOnlyGuard', () => {
     const context = {
       switchToHttp: () => ({
         getRequest: () => ({
-          user: { role: 'ADMIN' },
+          user: { role: Role.ADMIN },
         }),
       }),
     } as ExecutionContext;

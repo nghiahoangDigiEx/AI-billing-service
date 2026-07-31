@@ -43,8 +43,8 @@ describe('AuthController (e2e)', () => {
         })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('email', 'e2e@example.com');
-          expect(res.body).not.toHaveProperty('password');
+          expect(res.body.data).toHaveProperty('email', 'e2e@example.com');
+          expect(res.body.data).not.toHaveProperty('password');
         });
     });
 
@@ -70,8 +70,8 @@ describe('AuthController (e2e)', () => {
         .send({ email: 'e2e@example.com', password: 'password123' })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('accessToken');
-          expect(res.body).toHaveProperty('refreshToken');
+          expect(res.body.data).toHaveProperty('accessToken');
+          expect(res.body.data).toHaveProperty('refreshToken');
         });
     });
 

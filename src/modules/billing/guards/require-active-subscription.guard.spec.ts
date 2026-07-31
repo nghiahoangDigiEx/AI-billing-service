@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RequireActiveSubscriptionGuard } from './require-active-subscription.guard';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SubscriptionStatus } from '@prisma/client';
 
 describe('RequireActiveSubscriptionGuard', () => {
   let guard: RequireActiveSubscriptionGuard;
@@ -64,7 +65,7 @@ describe('RequireActiveSubscriptionGuard', () => {
     expect(mockFindFirst).toHaveBeenCalledWith({
       where: {
         userId: 'user-1',
-        status: 'ACTIVE',
+        status: SubscriptionStatus.ACTIVE,
       },
     });
   });
@@ -80,7 +81,7 @@ describe('RequireActiveSubscriptionGuard', () => {
 
     (prismaService.subscription!.findFirst as jest.Mock).mockResolvedValue({
       id: 'sub-1',
-      status: 'ACTIVE',
+      status: SubscriptionStatus.ACTIVE,
     });
 
     const result = await guard.canActivate(context);

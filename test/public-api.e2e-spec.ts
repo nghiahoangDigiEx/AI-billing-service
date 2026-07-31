@@ -74,9 +74,9 @@ describe('Public API (e2e)', () => {
     it('should return all active plans without authentication', async () => {
       const res = await request(app.getHttpServer()).get('/plans').expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-      expect(res.body[0].name).toBe('Public Pro Plan');
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0].name).toBe('Public Pro Plan');
     });
   });
 
@@ -84,9 +84,9 @@ describe('Public API (e2e)', () => {
     it('should return all active addons without authentication', async () => {
       const res = await request(app.getHttpServer()).get('/addons').expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-      expect(res.body[0].name).toBe('Public Addon');
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0].name).toBe('Public Addon');
     });
   });
 });

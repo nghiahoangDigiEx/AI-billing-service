@@ -6,6 +6,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 describe('WebhookController', () => {
   let controller: WebhookController;
@@ -26,6 +27,12 @@ describe('WebhookController', () => {
       providers: [
         { provide: StripeService, useValue: mockStripeService },
         { provide: WebhookService, useValue: mockWebhookService },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test_webhook_secret'),
+          },
+        },
       ],
     }).compile();
 

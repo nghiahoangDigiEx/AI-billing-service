@@ -39,11 +39,14 @@ describe('PaymentIntentSucceededStrategy', () => {
   });
 
   it('should handle payment_intent.succeeded event', async () => {
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.addonPackage.findUnique.mockResolvedValue({
       id: 'addon_1',
       credits: 50,
     });
+
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.addonPurchase.create.mockResolvedValue({
       id: 'purchase_1',

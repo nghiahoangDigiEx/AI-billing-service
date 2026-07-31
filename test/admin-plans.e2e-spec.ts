@@ -57,7 +57,7 @@ describe('Admin Plans API (e2e)', () => {
     const adminLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin-plan@example.com', password: 'password123' });
-    adminToken = adminLogin.body.accessToken;
+    adminToken = adminLogin.body.data.accessToken;
 
     // Create Normal User
     await request(app.getHttpServer())
@@ -66,7 +66,7 @@ describe('Admin Plans API (e2e)', () => {
     const userLogin = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'user-plan@example.com', password: 'password123' });
-    userToken = userLogin.body.accessToken;
+    userToken = userLogin.body.data.accessToken;
   });
 
   afterAll(async () => {
@@ -107,10 +107,10 @@ describe('Admin Plans API (e2e)', () => {
         })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('id');
-          expect(res.body.name).toBe('Pro Plan');
-          expect(res.body.slug).toBe('pro-plan-2');
-          expect(res.body.stripeProductId).toBe('prod_mock123');
+          expect(res.body.data).toHaveProperty('id');
+          expect(res.body.data.name).toBe('Pro Plan');
+          expect(res.body.data.slug).toBe('pro-plan-2');
+          expect(res.body.data.stripeProductId).toBe('prod_mock123');
         });
     });
   });
@@ -122,8 +122,8 @@ describe('Admin Plans API (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
     });
   });
 });

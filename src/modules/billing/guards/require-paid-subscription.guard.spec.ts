@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RequirePaidSubscriptionGuard } from './require-paid-subscription.guard';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SubscriptionStatus } from '@prisma/client';
 
 describe('RequirePaidSubscriptionGuard', () => {
   let guard: RequirePaidSubscriptionGuard;
@@ -72,7 +73,7 @@ describe('RequirePaidSubscriptionGuard', () => {
 
     mockFindFirst.mockResolvedValue({
       id: 'sub-1',
-      status: 'ACTIVE',
+      status: SubscriptionStatus.ACTIVE,
       plan: { slug: 'free' },
     });
 
@@ -95,7 +96,7 @@ describe('RequirePaidSubscriptionGuard', () => {
 
     mockFindFirst.mockResolvedValue({
       id: 'sub-1',
-      status: 'ACTIVE',
+      status: SubscriptionStatus.ACTIVE,
       plan: { slug: 'pro' },
     });
 

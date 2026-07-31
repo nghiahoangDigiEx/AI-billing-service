@@ -43,17 +43,22 @@ describe('SubscriptionDeletedStrategy', () => {
   });
 
   it('should handle customer.subscription.deleted event', async () => {
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.subscription.findFirst.mockResolvedValue({
       id: 'sub_1',
       userId: 'user_1',
     });
+
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.plan.findUnique.mockResolvedValue({
       id: 'plan_free',
       prices: [{ id: 'price_free' }],
       creditsIncluded: 10,
     });
+
+    // @ts-expect-error type override for testing
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     prisma.subscription.create.mockResolvedValue({
       id: 'sub_2',
