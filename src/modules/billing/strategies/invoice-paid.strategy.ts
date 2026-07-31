@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import { StripeEventStrategy } from './stripe-event.strategy';
 import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { INVOICE_PAID } from '../../../events/event.constants';
 
 @Injectable()
 export class InvoicePaidStrategy implements StripeEventStrategy {
@@ -157,7 +158,7 @@ export class InvoicePaidStrategy implements StripeEventStrategy {
         },
       });
 
-      this.eventEmitter.emit('invoice.paid', { subscriptionId });
+      this.eventEmitter.emit(INVOICE_PAID, { subscriptionId });
     });
   }
 }

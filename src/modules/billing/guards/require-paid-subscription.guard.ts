@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 
-import { User } from '@prisma/client';
+import { User, SubscriptionStatus } from '@prisma/client';
 
 interface AuthenticatedRequest {
   user?: User;
@@ -35,7 +35,7 @@ export class RequirePaidSubscriptionGuard implements CanActivate {
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         userId: user.id,
-        status: 'ACTIVE',
+        status: SubscriptionStatus.ACTIVE,
       },
       include: {
         plan: true,

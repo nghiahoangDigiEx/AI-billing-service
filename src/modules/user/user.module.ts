@@ -9,6 +9,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { UserService } from './user.service';
 import { AuthController } from './auth.controller';
 import { UsersController } from './users.controller';
+import { CONFIG_KEYS } from '../../common/constants/config.constants';
 
 @Module({
   imports: [
@@ -18,10 +19,12 @@ import { UsersController } from './users.controller';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>(CONFIG_KEYS.JWT_SECRET),
         signOptions: {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') as any,
+          expiresIn: configService.get<string>(
+            CONFIG_KEYS.JWT_EXPIRES_IN,
+          ) as any,
         },
       }),
     }),

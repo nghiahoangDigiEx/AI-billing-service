@@ -3,6 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import { StripeEventStrategy } from './stripe-event.strategy';
+import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
 
 @Injectable()
 export class SubscriptionDeletedStrategy implements StripeEventStrategy {
@@ -83,7 +84,7 @@ export class SubscriptionDeletedStrategy implements StripeEventStrategy {
       });
     });
 
-    this.eventEmitter.emit('subscription.deleted', {
+    this.eventEmitter.emit(SUBSCRIPTION_DELETED, {
       subscriptionId: subscription.id,
     });
   }

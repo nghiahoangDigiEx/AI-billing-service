@@ -3,6 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import { StripeEventStrategy } from './stripe-event.strategy';
+import { ADDON_PURCHASED } from '../../../events/event.constants';
 
 @Injectable()
 export class PaymentIntentSucceededStrategy implements StripeEventStrategy {
@@ -56,6 +57,9 @@ export class PaymentIntentSucceededStrategy implements StripeEventStrategy {
       });
     });
 
-    this.eventEmitter.emit('addon.purchased', { userId, addonPackageId });
+    this.logger.log(
+      `Successfully processed add-on purchase for user ${userId}`,
+    );
+    this.eventEmitter.emit(ADDON_PURCHASED, { userId, addonPackageId });
   }
 }

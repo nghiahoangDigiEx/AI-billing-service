@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
+import { CONFIG_KEYS } from '../../common/constants/config.constants';
 
 @Injectable()
 export class StripeService {
@@ -8,7 +9,9 @@ export class StripeService {
   private stripe: Stripe;
 
   constructor(private configService: ConfigService) {
-    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    const secretKey = this.configService.get<string>(
+      CONFIG_KEYS.STRIPE_SECRET_KEY,
+    );
     if (!secretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured');
     }

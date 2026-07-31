@@ -3,6 +3,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
+import {
+  INVOICE_PAID,
+  SUBSCRIPTION_PAYMENT_FAILED,
+  SUBSCRIPTION_DELETED,
+  ADDON_PURCHASED,
+} from '../../events/event.constants';
 
 @Injectable()
 export class WebhookService {
@@ -154,7 +160,10 @@ export class WebhookService {
       });
     });
 
-    this.eventEmitter.emit('invoice.paid', { subscriptionId: subscription.id });
+    this.logger.log(
+      `Successfully processed invoice.paid for ${subscription.id}`,
+    );
+    this.eventEmitter.emit(INVOICE_PAID, { subscriptionId: subscription.id });
   }
 
   private async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
@@ -193,7 +202,10 @@ export class WebhookService {
       });
     });
 
-    this.eventEmitter.emit('subscription.payment_failed', {
+    this.logger.log(
+      `Successfully handled payment failure for ${subscription.id}`,
+    );
+    this.eventEmitter.emit(SUBSCRIPTION_PAYMENT_FAILED, {
       subscriptionId: subscription.id,
     });
   }
@@ -266,7 +278,8 @@ export class WebhookService {
       });
     });
 
-    this.eventEmitter.emit('subscription.deleted', {
+    this.logger.log(`Successfully cancelled subscription ${subscription.id}`);
+    this.eventEmitter.emit(SUBSCRIPTION_DELETED, {
       subscriptionId: subscription.id,
     });
   }
@@ -315,6 +328,9 @@ export class WebhookService {
       });
     });
 
-    this.eventEmitter.emit('addon.purchased', { userId, addonPackageId });
+    this.logger.log(
+      `Successfully processed add-on purchase for user ${userId}`,
+    );
+    this.eventEmitter.emit(ADDON_PURCHASED, { userId, addonPackageId });
   }
 }

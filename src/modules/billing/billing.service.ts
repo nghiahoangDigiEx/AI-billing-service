@@ -12,6 +12,12 @@ import { CreatePlanPriceDto } from './dto/create-plan-price.dto';
 import { CreateAddonPackageDto } from './dto/create-addon-package.dto';
 import { UpdateAddonPackageDto } from './dto/update-addon-package.dto';
 import { ErrorCode } from '../../common/enums/error-code.enum';
+import {
+  PlanStatus,
+  SubscriptionStatus,
+  CreditSource,
+  CreditStatus,
+} from '@prisma/client';
 
 @Injectable()
 export class BillingService {
@@ -41,7 +47,7 @@ export class BillingService {
       stripeProduct.id,
       amount,
       currency,
-      billingInterval as 'month' | 'year',
+      billingInterval.toLowerCase() as 'month' | 'year',
     );
 
     const plan = await this.prisma.plan.create({
@@ -69,10 +75,10 @@ export class BillingService {
 
   async getAllPlans() {
     return this.prisma.plan.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: PlanStatus.ACTIVE },
       include: {
         prices: {
-          where: { status: 'ACTIVE' },
+          where: { status: PlanStatus.ACTIVE },
         },
       },
     });
@@ -133,7 +139,7 @@ export class BillingService {
       where: {
         planId,
         billingInterval: createPlanPriceDto.billingInterval,
-        status: 'ACTIVE',
+        status: PlanStatus.ACTIVE,
       },
     });
 
@@ -148,7 +154,7 @@ export class BillingService {
       plan.stripeProductId,
       createPlanPriceDto.amount,
       createPlanPriceDto.currency,
-      createPlanPriceDto.billingInterval as 'month' | 'year',
+      createPlanPriceDto.billingInterval.toLowerCase() as 'month' | 'year',
     );
 
     const price = await this.prisma.planPrice.create({
@@ -190,11 +196,11 @@ export class BillingService {
     const activePricesCount = await this.prisma.planPrice.count({
       where: {
         planId,
-        status: 'ACTIVE',
+        status: PlanStatus.ACTIVE,
       },
     });
 
-    if (activePricesCount === 1 && price.status === 'ACTIVE') {
+    if (activePricesCount === 1 && price.status === PlanStatus.ACTIVE) {
       throw new BadRequestException(
         'Cannot deactivate the last active price for a plan',
         ErrorCode.CANNOT_DEACTIVATE_LAST_PRICE,
@@ -203,7 +209,7 @@ export class BillingService {
 
     const updatedPrice = await this.prisma.planPrice.update({
       where: { id: priceId },
-      data: { status: 'INACTIVE' },
+      data: { status: PlanStatus.INACTIVE },
     });
 
     return updatedPrice;
@@ -237,7 +243,7 @@ export class BillingService {
 
   async getAllAddonPackages() {
     return this.prisma.addonPackage.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: PlanStatus.ACTIVE },
     });
   }
 
@@ -302,7 +308,7 @@ export class BillingService {
 
     const updatedAddonPackage = await this.prisma.addonPackage.update({
       where: { id },
-      data: { status: 'INACTIVE' },
+      data: { status: PlanStatus.INACTIVE },
     });
 
     return updatedAddonPackage;
@@ -334,7 +340,7 @@ export class BillingService {
 
   async getCurrentSubscription(userId: string) {
     const subscription = await this.prisma.subscription.findFirst({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: SubscriptionStatus.ACTIVE },
       include: { plan: true, planPrice: true },
     });
 
@@ -367,7 +373,7 @@ export class BillingService {
         'Add-on package not found',
         ErrorCode.ADDON_NOT_FOUND,
       );
-    if (addon.status !== 'ACTIVE')
+    if (addon.status !== PlanStatus.ACTIVE)
       throw new BadRequestException('Add-on package is not active');
 
     if (!user.stripeCustomerId) {
@@ -395,8 +401,8 @@ export class BillingService {
     return this.prisma.creditBalance.findMany({
       where: {
         userId,
-        source: 'ADDON',
-        status: { in: ['ACTIVE', 'FROZEN'] },
+        source: CreditSource.ADDON,
+        status: { in: [CreditStatus.ACTIVE, CreditStatus.FROZEN] },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -406,7 +412,7 @@ export class BillingService {
     return this.prisma.creditBalance.findMany({
       where: {
         userId,
-        source: 'ADDON',
+        source: CreditSource.ADDON,
       },
       orderBy: { createdAt: 'desc' },
     });

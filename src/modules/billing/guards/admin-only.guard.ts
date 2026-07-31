@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
 
-import { User } from '@prisma/client';
+import { User, Role } from '@prisma/client';
 
 interface AuthenticatedRequest {
   user?: User;
@@ -28,7 +28,7 @@ export class AdminOnlyGuard implements CanActivate {
       );
     }
 
-    if (user.role !== 'ADMIN') {
+    if (user.role !== Role.ADMIN) {
       throw new ForbiddenException(
         'Admin access required',
         ErrorCode.FORBIDDEN,

@@ -1,4 +1,9 @@
-## ADDED Requirements
+# shared-infrastructure
+
+## Purpose
+TBD
+
+## Requirements
 
 ### Requirement: Global Exception Filter
 The system SHALL provide a GlobalExceptionFilter that implements ExceptionFilter and is applied globally. The filter SHALL catch all unhandled exceptions and return a standardized JSON error response.

@@ -11,6 +11,7 @@ import {
 import type { Request } from 'express';
 import { StripeService } from './stripe.service';
 import { WebhookService } from './webhook.service';
+import { ConfigService } from '@nestjs/config';
 import { Public } from '../user/decorators/public.decorator';
 
 @Controller('webhooks')
@@ -18,6 +19,7 @@ export class WebhookController {
   constructor(
     private readonly stripeService: StripeService,
     private readonly webhookService: WebhookService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Public()
@@ -45,7 +47,6 @@ export class WebhookController {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await this.webhookService.processEvent(event);
       return { received: true };
     } catch (err: any) {

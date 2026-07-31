@@ -4,6 +4,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { USER_REGISTERED_SUCCESS } from '../../events/event.constants';
+import { CONFIG_KEYS } from '../../common/constants/config.constants';
+import { CreditSource, CreditStatus, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()
 export class BillingScheduler {
@@ -16,14 +19,14 @@ export class BillingScheduler {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  @Cron(process.env.BILLING_RETRY_INTERVAL || '*/5 * * * *')
+  @Cron(process.env[CONFIG_KEYS.BILLING_RETRY_INTERVAL] || '*/5 * * * *')
   async processPendingStripeSetup() {
     this.logger.debug(
       'Running background job to process pending Stripe setup...',
     );
 
     const maxRetries =
-      this.configService.get<number>('BILLING_MAX_RETRIES') || 5;
+      this.configService.get<number>(CONFIG_KEYS.BILLING_MAX_RETRIES) || 5;
 
     const users = await this.prisma.user.findMany({
       where: {
@@ -95,7 +98,7 @@ export class BillingScheduler {
               userId: user.id,
               planId: freePlan.id,
               planPriceId: freePlanPrice.id,
-              status: 'ACTIVE',
+              status: SubscriptionStatus.ACTIVE,
               currentPeriodStart: new Date(),
               currentPeriodEnd: new Date(
                 new Date().setMonth(new Date().getMonth() + 1),
@@ -107,11 +110,11 @@ export class BillingScheduler {
           await tx.creditBalance.create({
             data: {
               userId: user.id,
-              source: 'MONTHLY',
+              source: CreditSource.MONTHLY,
               sourceRef: newSub.id,
               totalCredits: 100, // Hardcoded fallback based on webhook logic
               remainingCredits: 100,
-              status: 'ACTIVE',
+              status: CreditStatus.ACTIVE,
               periodStart: newSub.currentPeriodStart,
               periodEnd: newSub.currentPeriodEnd,
             },
@@ -130,7 +133,7 @@ export class BillingScheduler {
         this.logger.log(
           `Successfully completed pending Stripe setup for user ${user.id}`,
         );
-        this.eventEmitter.emit('user.registered.success', { userId: user.id });
+        this.eventEmitter.emit(USER_REGISTERED_SUCCESS, { userId: user.id });
       } catch (error) {
         this.logger.error(
           `Failed to process Stripe setup for user ${user.id}`,
