@@ -4,7 +4,8 @@ import { StripeService } from './stripe.service';
 
 describe('StripeService', () => {
   let service: StripeService;
-  let configService: ConfigService;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let _configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,7 +25,7 @@ describe('StripeService', () => {
     }).compile();
 
     service = module.get<StripeService>(StripeService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {
@@ -34,7 +35,7 @@ describe('StripeService', () => {
   describe('createCustomer', () => {
     it('should create a Stripe customer', async () => {
       const mockCustomer = { id: 'cus_mock', email: 'test@example.com' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         customers: {
           create: jest.fn().mockResolvedValue(mockCustomer),
         },
@@ -48,7 +49,7 @@ describe('StripeService', () => {
   describe('createSubscription', () => {
     it('should create a Stripe subscription', async () => {
       const mockSubscription = { id: 'sub_mock', customer: 'cus_mock' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         subscriptions: {
           create: jest.fn().mockResolvedValue(mockSubscription),
         },
@@ -62,7 +63,7 @@ describe('StripeService', () => {
   describe('cancelSubscription', () => {
     it('should cancel a Stripe subscription', async () => {
       const mockSubscription = { id: 'sub_mock', status: 'canceled' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         subscriptions: {
           cancel: jest.fn().mockResolvedValue(mockSubscription),
         },
@@ -76,7 +77,7 @@ describe('StripeService', () => {
   describe('createProduct', () => {
     it('should create a Stripe product', async () => {
       const mockProduct = { id: 'prod_mock', name: 'Test Product' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         products: {
           create: jest.fn().mockResolvedValue(mockProduct),
         },
@@ -90,7 +91,7 @@ describe('StripeService', () => {
   describe('createPrice', () => {
     it('should create a Stripe price', async () => {
       const mockPrice = { id: 'price_mock', product: 'prod_mock' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         prices: {
           create: jest.fn().mockResolvedValue(mockPrice),
         },
@@ -109,7 +110,7 @@ describe('StripeService', () => {
   describe('archiveProduct', () => {
     it('should archive a Stripe product', async () => {
       const mockProduct = { id: 'prod_mock', active: false };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         products: {
           update: jest.fn().mockResolvedValue(mockProduct),
         },
@@ -123,7 +124,7 @@ describe('StripeService', () => {
   describe('createPaymentIntent', () => {
     it('should create a payment intent', async () => {
       const mockPaymentIntent = { id: 'pi_mock', amount: 1000 };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         paymentIntents: {
           create: jest.fn().mockResolvedValue(mockPaymentIntent),
         },
@@ -139,7 +140,7 @@ describe('StripeService', () => {
   describe('verifyWebhookSignature', () => {
     it('should verify webhook signature', () => {
       const mockEvent = { id: 'evt_mock', type: 'invoice.paid' };
-      (service as any).stripe = {
+      (service as unknown as { stripe: any }).stripe = {
         webhooks: {
           constructEvent: jest.fn().mockReturnValue(mockEvent),
         },

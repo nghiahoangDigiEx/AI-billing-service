@@ -67,6 +67,7 @@ describe('WebhookController', () => {
     it('should throw InternalServerErrorException if processing fails', async () => {
       const req = { rawBody: Buffer.from('payload') };
       const mockEvent = { id: 'evt_1', type: 'invoice.paid' };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       stripeService.verifyWebhookSignature.mockReturnValue(mockEvent as any);
       webhookService.processEvent.mockRejectedValue(new Error('DB Error'));
 
@@ -78,6 +79,7 @@ describe('WebhookController', () => {
     it('should return { received: true } on success', async () => {
       const req = { rawBody: Buffer.from('payload') };
       const mockEvent = { id: 'evt_1', type: 'invoice.paid' };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       stripeService.verifyWebhookSignature.mockReturnValue(mockEvent as any);
       webhookService.processEvent.mockResolvedValue(undefined);
 

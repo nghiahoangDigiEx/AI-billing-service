@@ -20,7 +20,12 @@ describe('User Subscriptions API (e2e)', () => {
   beforeAll(async () => {
     mockStripeService = {
       createSubscription: jest.fn().mockResolvedValue({ id: 'sub_mock123' }),
-      createPaymentIntent: jest.fn().mockResolvedValue({ id: 'pi_mock123', client_secret: 'secret_mock123' }),
+      createPaymentIntent: jest
+        .fn()
+        .mockResolvedValue({
+          id: 'pi_mock123',
+          client_secret: 'secret_mock123',
+        }),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -44,14 +49,23 @@ describe('User Subscriptions API (e2e)', () => {
     await prisma.user.deleteMany();
 
     // Create Normal User
-    await request(app.getHttpServer()).post('/auth/register').send({ email: 'user-sub@example.com', password: 'password123' });
-    const userLogin = await request(app.getHttpServer()).post('/auth/login').send({ email: 'user-sub@example.com', password: 'password123' });
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'user-sub@example.com', password: 'password123' });
+    const userLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'user-sub@example.com', password: 'password123' });
     userToken = userLogin.body.accessToken;
 
-    const user = await prisma.user.findUnique({ where: { email: 'user-sub@example.com' } });
+    const user = await prisma.user.findUnique({
+      where: { email: 'user-sub@example.com' },
+    });
     userId = user!.id;
     // Provide a dummy stripeCustomerId so the upgrade can proceed
-    await prisma.user.update({ where: { id: userId }, data: { stripeCustomerId: 'cus_dummy123' } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { stripeCustomerId: 'cus_dummy123' },
+    });
 
     // Seed a plan and price
     const plan = await prisma.plan.create({
@@ -127,11 +141,11 @@ describe('User Subscriptions API (e2e)', () => {
           stripeSubscriptionId: 'sub_mock123',
           status: 'ACTIVE',
           currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+          currentPeriodEnd: new Date(
+            new Date().setMonth(new Date().getMonth() + 1),
+          ),
         },
       });
-
-
 
       return request(app.getHttpServer())
         .get('/subscriptions/current')

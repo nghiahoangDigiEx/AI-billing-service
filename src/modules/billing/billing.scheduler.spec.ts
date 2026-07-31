@@ -27,7 +27,11 @@ describe('BillingScheduler', () => {
       creditBalance: {
         create: jest.fn(),
       },
-      $transaction: jest.fn().mockImplementation(async (cb) => cb(mockPrisma)),
+      $transaction: jest
+        .fn()
+        .mockImplementation((cb: (p: any) => Promise<unknown>) =>
+          cb(mockPrisma),
+        ),
     };
 
     const mockStripeService = {

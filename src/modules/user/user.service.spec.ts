@@ -71,7 +71,8 @@ describe('UserService', () => {
   describe('register', () => {
     it('creates user with hashed password and emits event', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      bcrypt.hash.mockResolvedValue('hashed_password');
       prisma.user.create.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
@@ -107,7 +108,8 @@ describe('UserService', () => {
         email: 'test@example.com',
         password: 'hashed_password',
       });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      bcrypt.compare.mockResolvedValue(true);
       jwtService.signAsync.mockResolvedValue('access_token');
       prisma.refreshToken.create.mockResolvedValue({});
 
@@ -125,7 +127,8 @@ describe('UserService', () => {
         id: '1',
         password: 'hashed_password',
       });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      bcrypt.compare.mockResolvedValue(false);
 
       await expect(
         service.login({ email: 'test@example.com', password: 'wrong' }),

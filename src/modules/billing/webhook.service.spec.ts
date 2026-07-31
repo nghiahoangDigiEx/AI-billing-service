@@ -35,7 +35,11 @@ describe('WebhookService', () => {
       addonPurchase: {
         create: jest.fn(),
       },
-      $transaction: jest.fn().mockImplementation(async (cb) => cb(mockPrisma)),
+      $transaction: jest
+        .fn()
+        .mockImplementation((cb: (p: any) => Promise<unknown>) =>
+          cb(mockPrisma),
+        ),
     };
 
     const mockEventEmitter = {
@@ -106,10 +110,12 @@ describe('WebhookService', () => {
       });
       expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user_1', source: 'ADDON', status: 'FROZEN' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: { status: 'ACTIVE', unfrozenAt: expect.any(Date) },
       });
       expect(prisma.creditBalance.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             source: 'MONTHLY',
             sourceRef: 'inv_1',
@@ -122,6 +128,7 @@ describe('WebhookService', () => {
       });
       expect(prisma.webhookEvent.update).toHaveBeenCalledWith({
         where: { stripeEventId: 'evt_1' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: { status: 'PROCESSED', processedAt: expect.any(Date) },
       });
     });
@@ -145,6 +152,7 @@ describe('WebhookService', () => {
       });
       expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user_1', source: 'ADDON', status: 'ACTIVE' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: { status: 'FROZEN', frozenAt: expect.any(Date) },
       });
       expect(eventEmitter.emit).toHaveBeenCalledWith(
@@ -183,10 +191,12 @@ describe('WebhookService', () => {
       expect(prisma.subscription.create).toHaveBeenCalled();
       expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user_1', source: 'ADDON', status: 'ACTIVE' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: { status: 'FROZEN', frozenAt: expect.any(Date) },
       });
       expect(prisma.creditBalance.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             source: 'MONTHLY',
             sourceRef: 'sub_free',
@@ -231,6 +241,7 @@ describe('WebhookService', () => {
       });
       expect(prisma.creditBalance.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             source: 'ADDON',
             sourceRef: 'purchase_1',

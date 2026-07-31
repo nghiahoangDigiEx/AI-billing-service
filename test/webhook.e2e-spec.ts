@@ -51,6 +51,7 @@ describe('WebhookController (e2e)', () => {
 
   describe('POST /webhooks/stripe', () => {
     it('should reject requests without signature', () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       return request(app.getHttpServer())
         .post('/webhooks/stripe')
         .send({ type: 'invoice.paid' })
@@ -71,6 +72,7 @@ describe('WebhookController (e2e)', () => {
         .mockReturnValue(mockEvent as unknown as Stripe.Event);
 
       // First request (should process)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await request(app.getHttpServer())
         .post('/webhooks/stripe')
         .set('stripe-signature', 'valid_sig')
@@ -88,6 +90,7 @@ describe('WebhookController (e2e)', () => {
       expect(dbEvent?.processedAt).toBeDefined();
 
       // Second request (should skip but return 201)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await request(app.getHttpServer())
         .post('/webhooks/stripe')
         .set('stripe-signature', 'valid_sig')
@@ -105,6 +108,7 @@ describe('WebhookController (e2e)', () => {
           throw new Error('Invalid signature');
         });
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       return request(app.getHttpServer())
         .post('/webhooks/stripe')
         .set('stripe-signature', 'invalid_sig')

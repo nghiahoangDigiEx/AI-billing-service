@@ -20,7 +20,9 @@ describe('Admin Addons API (e2e)', () => {
     mockStripeService = {
       createProduct: jest.fn().mockResolvedValue({ id: 'prod_mock123' }),
       createPrice: jest.fn().mockResolvedValue({ id: 'price_mock123' }),
-      archiveProduct: jest.fn().mockResolvedValue({ id: 'prod_mock123', active: false }),
+      archiveProduct: jest
+        .fn()
+        .mockResolvedValue({ id: 'prod_mock123', active: false }),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -42,15 +44,28 @@ describe('Admin Addons API (e2e)', () => {
     await prisma.user.deleteMany();
 
     // Create Admin User
-    await request(app.getHttpServer()).post('/auth/register').send({ email: 'admin-addon@example.com', password: 'password123' });
-    const adminUser = await prisma.user.findUnique({ where: { email: 'admin-addon@example.com' } });
-    await prisma.user.update({ where: { id: adminUser!.id }, data: { role: Role.ADMIN } });
-    const adminLogin = await request(app.getHttpServer()).post('/auth/login').send({ email: 'admin-addon@example.com', password: 'password123' });
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'admin-addon@example.com', password: 'password123' });
+    const adminUser = await prisma.user.findUnique({
+      where: { email: 'admin-addon@example.com' },
+    });
+    await prisma.user.update({
+      where: { id: adminUser!.id },
+      data: { role: Role.ADMIN },
+    });
+    const adminLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin-addon@example.com', password: 'password123' });
     adminToken = adminLogin.body.accessToken;
 
     // Create Normal User
-    await request(app.getHttpServer()).post('/auth/register').send({ email: 'user-addon@example.com', password: 'password123' });
-    const userLogin = await request(app.getHttpServer()).post('/auth/login').send({ email: 'user-addon@example.com', password: 'password123' });
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'user-addon@example.com', password: 'password123' });
+    const userLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'user-addon@example.com', password: 'password123' });
     userToken = userLogin.body.accessToken;
   });
 

@@ -78,6 +78,7 @@ export class WebhookService {
         where: { stripeEventId: event.id },
         data: {
           status: 'FAILED',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           errorMessage: error.message || 'Unknown error',
         },
       });

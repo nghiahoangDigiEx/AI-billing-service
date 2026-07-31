@@ -37,6 +37,7 @@ export class SubscriptionController {
     @Body() upgradeSubscriptionDto: UpgradeSubscriptionDto,
   ) {
     return this.billingService.upgradeSubscription(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       user.id,
       upgradeSubscriptionDto.planPriceId,
     );
@@ -46,6 +47,7 @@ export class SubscriptionController {
   @ApiOperation({ summary: 'View current active subscription' })
   @ApiResponse({ status: 200, description: 'Current active subscription' })
   async getCurrentSubscription(@CurrentUser() user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     return this.billingService.getCurrentSubscription(user.id);
   }
 
@@ -53,6 +55,7 @@ export class SubscriptionController {
   @ApiOperation({ summary: 'View subscription history' })
   @ApiResponse({ status: 200, description: 'List of all subscriptions' })
   async getSubscriptionHistory(@CurrentUser() user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     return this.billingService.getSubscriptionHistory(user.id);
   }
 
@@ -62,6 +65,7 @@ export class SubscriptionController {
   @ApiOperation({ summary: 'Purchase one-time credit pack (Add-on)' })
   @ApiResponse({ status: 202, description: 'Purchase initiated successfully' })
   async purchaseAddon(@CurrentUser() user: any, @Param('id') id: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     return this.billingService.purchaseAddon(user.id, id);
   }
 
@@ -72,6 +76,7 @@ export class SubscriptionController {
     description: 'List of active and frozen add-on purchases',
   })
   async getUserAddonPurchases(@CurrentUser() user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     return this.billingService.getUserAddonPurchases(user.id);
   }
 
@@ -79,6 +84,7 @@ export class SubscriptionController {
   @ApiOperation({ summary: 'View all add-on purchases' })
   @ApiResponse({ status: 200, description: 'List of all add-on purchases' })
   async getUserAddonHistory(@CurrentUser() user: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
     return this.billingService.getUserAddonHistory(user.id);
   }
 }

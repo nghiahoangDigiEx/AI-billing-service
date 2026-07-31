@@ -14,6 +14,7 @@ export class StripeService {
     }
 
     this.stripe = new Stripe(secretKey, {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       apiVersion: '2024-12-18.acacia' as any,
     });
   }

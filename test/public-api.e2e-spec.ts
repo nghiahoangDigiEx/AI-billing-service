@@ -72,9 +72,7 @@ describe('Public API (e2e)', () => {
 
   describe('GET /plans', () => {
     it('should return all active plans without authentication', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/plans')
-        .expect(200);
+      const res = await request(app.getHttpServer()).get('/plans').expect(200);
 
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
@@ -84,9 +82,7 @@ describe('Public API (e2e)', () => {
 
   describe('GET /addons', () => {
     it('should return all active addons without authentication', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/addons')
-        .expect(200);
+      const res = await request(app.getHttpServer()).get('/addons').expect(200);
 
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
