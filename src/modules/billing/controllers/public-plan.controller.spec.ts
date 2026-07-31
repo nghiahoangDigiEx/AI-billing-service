@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PublicPlanController } from './public-plan.controller';
-import { BillingService } from './billing.service';
+import { BillingService } from '../services/billing.service';
 
 describe('PublicPlanController', () => {
   let controller: PublicPlanController;

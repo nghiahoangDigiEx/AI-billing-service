@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User, Role, Provider } from '@prisma/client';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserAlreadyExistsException } from '../../common/exceptions/user-already-exists.exception';
-import { UserNotFoundException } from '../../common/exceptions/user-not-found.exception';
-import { USER_REGISTERED } from '../../events/event.constants';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { UserAlreadyExistsException } from '../../../common/exceptions/user-already-exists.exception';
+import { UserNotFoundException } from '../../../common/exceptions/user-not-found.exception';
+import { USER_REGISTERED } from '../../../events/event.constants';
 
 export type UserWithoutPassword = Omit<User, 'password' | 'providerId'>;
 

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-import { UserService } from '../user/user.service';
-import { InvalidCredentialsException } from '../../common/exceptions/invalid-credentials.exception';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { UserService } from '../../user/services/user.service';
+import { InvalidCredentialsException } from '../../../common/exceptions/invalid-credentials.exception';
 import * as bcrypt from 'bcrypt';
 import { Provider } from '@prisma/client';
 

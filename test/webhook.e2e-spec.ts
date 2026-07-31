@@ -4,7 +4,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import Stripe from 'stripe';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { StripeService } from '../src/modules/billing/stripe.service';
+import { StripeService } from '../src/modules/billing/services/stripe.service';
 
 jest.setTimeout(30000);
 

@@ -1,4 +1,4 @@
-import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
+import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Get,
@@ -9,10 +9,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { BillingService } from './billing.service';
-import { UpgradeSubscriptionDto } from './dto/upgrade-subscription.dto';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { RequirePaidSubscriptionGuard } from './guards/require-paid-subscription.guard';
+import { BillingService } from '../services/billing.service';
+import { UpgradeSubscriptionDto } from '../dto/upgrade-subscription.dto';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { RequirePaidSubscriptionGuard } from '../guards/require-paid-subscription.guard';
 import { Param } from '@nestjs/common';
 
 @ApiTags('User - Subscriptions')

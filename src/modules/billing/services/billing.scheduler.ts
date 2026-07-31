@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { USER_REGISTERED_SUCCESS } from '../../events/event.constants';
-import { CONFIG_KEYS } from '../../common/constants/config.constants';
+import { USER_REGISTERED_SUCCESS } from '../../../events/event.constants';
+import { CONFIG_KEYS } from '../../../common/constants/config.constants';
 import { CreditSource, CreditStatus, SubscriptionStatus } from '@prisma/client';
 
 @Injectable()

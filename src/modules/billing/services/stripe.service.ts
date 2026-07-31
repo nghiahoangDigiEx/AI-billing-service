@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { CONFIG_KEYS } from '../../common/constants/config.constants';
+import { CONFIG_KEYS } from '../../../common/constants/config.constants';
 
 @Injectable()
 export class StripeService {

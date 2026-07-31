@@ -5,9 +5,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { BillingService } from './billing.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
-import { ErrorCode } from '../../common/enums/error-code.enum';
+import { ErrorCode } from '../../../common/enums/error-code.enum';
 
 describe('BillingService', () => {
   let service: BillingService;

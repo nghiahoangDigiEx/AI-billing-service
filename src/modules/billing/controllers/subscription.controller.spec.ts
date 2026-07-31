@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubscriptionController } from './subscription.controller';
-import { BillingService } from './billing.service';
-import { RequirePaidSubscriptionGuard } from './guards/require-paid-subscription.guard';
+import { BillingService } from '../services/billing.service';
+import { RequirePaidSubscriptionGuard } from '../guards/require-paid-subscription.guard';
 
 describe('SubscriptionController', () => {
   let controller: SubscriptionController;

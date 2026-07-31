@@ -6,8 +6,8 @@ import { StringValue } from 'ms';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
+import { AuthService } from './services/auth.service';
+import { AuthController } from './controllers/auth.controller';
 import { UserModule } from '../user/user.module';
 import { CONFIG_KEYS } from '../../common/constants/config.constants';
 

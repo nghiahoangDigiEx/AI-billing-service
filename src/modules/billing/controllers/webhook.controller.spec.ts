@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WebhookController } from './webhook.controller';
-import { StripeService } from './stripe.service';
-import { WebhookService } from './webhook.service';
+import { StripeService } from '../services/stripe.service';
+import { WebhookService } from '../services/webhook.service';
 import {
   BadRequestException,
   InternalServerErrorException,

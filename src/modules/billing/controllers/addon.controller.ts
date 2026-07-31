@@ -1,4 +1,4 @@
-import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
+import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Post,
@@ -16,10 +16,10 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { BillingService } from './billing.service';
-import { CreateAddonPackageDto } from './dto/create-addon-package.dto';
-import { UpdateAddonPackageDto } from './dto/update-addon-package.dto';
-import { AdminOnly } from './decorators/admin-only.decorator';
+import { BillingService } from '../services/billing.service';
+import { CreateAddonPackageDto } from '../dto/create-addon-package.dto';
+import { UpdateAddonPackageDto } from '../dto/update-addon-package.dto';
+import { AdminOnly } from '../decorators/admin-only.decorator';
 
 @ApiTags('Admin - Add-ons')
 @ApiBearerAuth()

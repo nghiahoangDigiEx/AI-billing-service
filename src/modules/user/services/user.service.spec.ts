@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { UserAlreadyExistsException } from '../../common/exceptions/user-already-exists.exception';
-import { UserNotFoundException } from '../../common/exceptions/user-not-found.exception';
+import { UserAlreadyExistsException } from '../../../common/exceptions/user-already-exists.exception';
+import { UserNotFoundException } from '../../../common/exceptions/user-not-found.exception';
 import { Role } from '@prisma/client';
-import { USER_REGISTERED } from '../../events/event.constants';
+import { USER_REGISTERED } from '../../../events/event.constants';
 
 describe('UserService', () => {
   const mockPrismaService = {

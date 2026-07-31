@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { Prisma, WebhookEventStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import {
@@ -8,7 +8,7 @@ import {
   SUBSCRIPTION_PAYMENT_FAILED,
   SUBSCRIPTION_DELETED,
   ADDON_PURCHASED,
-} from '../../events/event.constants';
+} from '../../../events/event.constants';
 
 @Injectable()
 export class WebhookService {
@@ -27,8 +27,8 @@ export class WebhookService {
 
     if (
       existingEvent &&
-      (existingEvent.status === 'PROCESSED' ||
-        existingEvent.status === 'PENDING')
+      (existingEvent.status === WebhookEventStatus.PROCESSED ||
+        existingEvent.status === WebhookEventStatus.PENDING)
     ) {
       this.logger.log(
         `Event ${event.id} already ${existingEvent.status}. Skipping.`,
@@ -42,13 +42,13 @@ export class WebhookService {
           stripeEventId: event.id,
           eventType: event.type,
           payload: event as unknown as Prisma.InputJsonValue,
-          status: 'PENDING',
+          status: WebhookEventStatus.PENDING,
         },
       });
     } else {
       await this.prisma.webhookEvent.update({
         where: { id: existingEvent.id },
-        data: { status: 'PENDING', errorMessage: null },
+        data: { status: WebhookEventStatus.PENDING, errorMessage: null },
       });
     }
 
@@ -74,7 +74,7 @@ export class WebhookService {
       await this.prisma.webhookEvent.update({
         where: { stripeEventId: event.id },
         data: {
-          status: 'PROCESSED',
+          status: WebhookEventStatus.PROCESSED,
           processedAt: new Date(),
         },
       });
@@ -84,7 +84,7 @@ export class WebhookService {
       await this.prisma.webhookEvent.update({
         where: { stripeEventId: event.id },
         data: {
-          status: 'FAILED',
+          status: WebhookEventStatus.FAILED,
           errorMessage: error.message || 'Unknown error',
         },
       });

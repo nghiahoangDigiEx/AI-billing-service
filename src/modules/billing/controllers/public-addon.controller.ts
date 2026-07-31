@@ -1,8 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
-import { BillingService } from './billing.service';
-import { Public } from '../auth/decorators/public.decorator';
+import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
+import { BillingService } from '../services/billing.service';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @ApiTags('Public - Add-ons')
 @Public()

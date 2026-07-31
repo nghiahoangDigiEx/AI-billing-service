@@ -8,10 +8,10 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import Stripe from 'stripe';
-import { StripeService } from './stripe.service';
-import { WebhookService } from './webhook.service';
+import { StripeService } from '../services/stripe.service';
+import { WebhookService } from '../services/webhook.service';
 import { ConfigService } from '@nestjs/config';
-import { Public } from '../auth/decorators/public.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 
 @Controller('webhooks')
 export class WebhookController {

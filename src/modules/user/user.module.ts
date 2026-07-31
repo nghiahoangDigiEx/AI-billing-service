@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from '../../prisma/prisma.module';
-import { UserService } from './user.service';
-import { UsersController } from './users.controller';
+import { UserService } from './services/user.service';
+import { UsersController } from './controllers/users.controller';
 
 @Module({
   imports: [EventEmitterModule, PrismaModule],

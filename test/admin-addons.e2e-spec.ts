@@ -4,7 +4,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 const request = require('supertest');
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
-import { StripeService } from './../src/modules/billing/stripe.service';
+import { StripeService } from './../src/modules/billing/services/stripe.service';
 import { Role } from '@prisma/client';
 
 jest.setTimeout(30000);

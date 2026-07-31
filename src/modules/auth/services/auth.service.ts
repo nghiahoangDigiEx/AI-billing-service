@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma/prisma.service';
-import { UserService, UserWithoutPassword } from '../user/user.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  UserService,
+  UserWithoutPassword,
+} from '../../user/services/user.service';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { Provider, User } from '@prisma/client';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { InvalidCredentialsException } from '../../common/exceptions/invalid-credentials.exception';
-import { InvalidRefreshTokenException } from '../../common/exceptions/invalid-refresh-token.exception';
+import { RegisterDto } from '../dto/register.dto';
+import { LoginDto } from '../dto/login.dto';
+import { InvalidCredentialsException } from '../../../common/exceptions/invalid-credentials.exception';
+import { InvalidRefreshTokenException } from '../../../common/exceptions/invalid-refresh-token.exception';
 
 @Injectable()
 export class AuthService {
