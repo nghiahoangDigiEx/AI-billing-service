@@ -9,25 +9,26 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
-import { UserService } from './user.service';
+import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { Public } from './decorators/public.decorator';
 import { AuthResponseDto } from './dto/auth-response.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { UserResponseDto } from '../user/dto/user-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.CREATED,
     description: 'User successfully registered.',
     type: UserResponseDto,
@@ -37,13 +38,13 @@ export class AuthController {
     description: 'User with this email already exists.',
   })
   async register(@Body() registerDto: RegisterDto) {
-    return this.userService.register(registerDto);
+    return this.authService.register(registerDto);
   }
 
   @Public()
   @Post('login')
   @ApiOperation({ summary: 'Login and get tokens' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'User successfully logged in.',
     type: AuthResponseDto,
@@ -53,13 +54,13 @@ export class AuthController {
     description: 'Invalid email or password.',
   })
   async login(@Body() loginDto: LoginDto) {
-    return this.userService.login(loginDto);
+    return this.authService.login(loginDto);
   }
 
   @Public()
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh access tokens' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'Tokens successfully refreshed.',
     type: AuthResponseDto,
@@ -69,7 +70,7 @@ export class AuthController {
     description: 'Invalid or expired refresh token.',
   })
   async refresh(@Body() refreshDto: RefreshDto) {
-    return this.userService.refreshToken(refreshDto.refreshToken);
+    return this.authService.refreshToken(refreshDto.refreshToken);
   }
 
   @Public()

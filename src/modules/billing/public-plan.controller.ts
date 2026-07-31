@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
 import { BillingService } from './billing.service';
-import { Public } from '../user/decorators/public.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Public - Plans')
 @Public()
@@ -11,7 +12,7 @@ export class PublicPlanController {
 
   @Get()
   @ApiOperation({ summary: 'List all active plans with active prices' })
-  @ApiResponse({ status: 200, description: 'List of all active plans' })
+  @ApiStandardResponse({ status: 200, description: 'List of all active plans' })
   async getActivePlans() {
     return this.billingService.getAllPlans();
   }

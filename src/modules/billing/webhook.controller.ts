@@ -4,15 +4,14 @@ import {
   Headers,
   Req,
   BadRequestException,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  RawBodyRequest,
   InternalServerErrorException,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import Stripe from 'stripe';
 import { StripeService } from './stripe.service';
 import { WebhookService } from './webhook.service';
 import { ConfigService } from '@nestjs/config';
-import { Public } from '../user/decorators/public.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('webhooks')
 export class WebhookController {
@@ -37,22 +36,22 @@ export class WebhookController {
       throw new BadRequestException('Missing raw body');
     }
 
-    let event;
+    let event: Stripe.Event;
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       event = this.stripeService.verifyWebhookSignature(req.rawBody, signature);
-    } catch (err: any) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      throw new BadRequestException(`Webhook Error: ${err.message}`);
+    } catch (err) {
+      const error = err as Error;
+      throw new BadRequestException(`Webhook Error: ${error.message}`);
     }
 
     try {
       await this.webhookService.processEvent(event);
       return { received: true };
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as Error;
       // Return 500 so Stripe retries the webhook
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      throw new InternalServerErrorException(err.message);
+      throw new InternalServerErrorException(error.message);
     }
   }
 }

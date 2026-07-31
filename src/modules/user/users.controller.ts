@@ -1,3 +1,4 @@
+import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Get,
@@ -14,10 +15,10 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { Roles } from './decorators/roles.decorator';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { UserResponseDto } from './dto/user-response.dto';
@@ -32,7 +33,7 @@ export class UsersController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'Returns the current user profile.',
     type: UserResponseDto,
@@ -44,7 +45,7 @@ export class UsersController {
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Update current user profile' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'Profile updated successfully.',
     type: UserResponseDto,
@@ -60,7 +61,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'Returns all users.',
     type: [UserResponseDto],
@@ -77,7 +78,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Update user role (Admin only)' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: HttpStatus.OK,
     description: 'Role updated successfully.',
     type: UserResponseDto,

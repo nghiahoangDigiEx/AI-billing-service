@@ -1,3 +1,4 @@
+import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Post,
@@ -31,7 +32,10 @@ export class BillingController {
   @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new plan (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Plan created successfully' })
+  @ApiStandardResponse({
+    status: 201,
+    description: 'Plan created successfully',
+  })
   @ApiResponse({
     status: 403,
     description: 'Forbidden - Admin access required',
@@ -43,7 +47,7 @@ export class BillingController {
   @Get()
   @AdminOnly()
   @ApiOperation({ summary: 'Get all plans (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of all plans' })
+  @ApiStandardResponse({ status: 200, description: 'List of all plans' })
   async getAllPlans() {
     return this.billingService.getAllPlans();
   }
@@ -51,7 +55,7 @@ export class BillingController {
   @Get(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Get plan by ID (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Plan details' })
+  @ApiStandardResponse({ status: 200, description: 'Plan details' })
   @ApiResponse({ status: 404, description: 'Plan not found' })
   async getPlanById(@Param('id') id: string) {
     return this.billingService.getPlanById(id);
@@ -60,7 +64,10 @@ export class BillingController {
   @Patch(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Update plan (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Plan updated successfully' })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Plan updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Plan not found' })
   async updatePlan(
     @Param('id') id: string,
@@ -73,7 +80,7 @@ export class BillingController {
   @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add price to plan (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Price added successfully' })
+  @ApiStandardResponse({ status: 201, description: 'Price added successfully' })
   @ApiResponse({ status: 404, description: 'Plan not found' })
   @ApiResponse({ status: 409, description: 'Duplicate billing interval' })
   async addPriceToPlan(
@@ -86,7 +93,10 @@ export class BillingController {
   @Delete(':planId/prices/:priceId')
   @AdminOnly()
   @ApiOperation({ summary: 'Deactivate plan price (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Price deactivated successfully' })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'Price deactivated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Plan or price not found' })
   @ApiResponse({
     status: 400,

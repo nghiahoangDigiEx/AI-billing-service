@@ -1,3 +1,4 @@
+import { ApiStandardResponse } from '../../common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Post,
@@ -30,7 +31,7 @@ export class AddonController {
   @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new add-on package (Admin only)' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: 201,
     description: 'Add-on package created successfully',
   })
@@ -47,7 +48,10 @@ export class AddonController {
   @Get()
   @AdminOnly()
   @ApiOperation({ summary: 'Get all add-on packages (Admin only)' })
-  @ApiResponse({ status: 200, description: 'List of all add-on packages' })
+  @ApiStandardResponse({
+    status: 200,
+    description: 'List of all add-on packages',
+  })
   async getAllAddonPackages() {
     return this.billingService.getAllAddonPackages();
   }
@@ -55,7 +59,7 @@ export class AddonController {
   @Get(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Get add-on package by ID (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Add-on package details' })
+  @ApiStandardResponse({ status: 200, description: 'Add-on package details' })
   @ApiResponse({ status: 404, description: 'Add-on package not found' })
   async getAddonPackageById(@Param('id') id: string) {
     return this.billingService.getAddonPackageById(id);
@@ -64,7 +68,7 @@ export class AddonController {
   @Patch(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Update add-on package (Admin only)' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: 200,
     description: 'Add-on package updated successfully',
   })
@@ -79,7 +83,7 @@ export class AddonController {
   @Delete(':id')
   @AdminOnly()
   @ApiOperation({ summary: 'Deactivate add-on package (Admin only)' })
-  @ApiResponse({
+  @ApiStandardResponse({
     status: 200,
     description: 'Add-on package deactivated successfully',
   })
