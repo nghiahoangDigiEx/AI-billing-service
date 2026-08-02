@@ -22,14 +22,11 @@ export class TransformInterceptor<T> implements NestInterceptor<
 
     // Skip formatting for Stripe webhooks since Stripe expects a standard HTTP response
     if (request.url.includes('/webhooks/stripe')) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return next.handle();
+      return next.handle() as Observable<ApiResponse<T>>;
     }
 
     return next.handle().pipe(
       map((data: unknown) => {
-        // If data is already in ApiResponse format or is undefined, return as is
-        // Some responses might not have data, we just wrap them as { success: true }
         if (data && typeof data === 'object' && 'success' in data) {
           return data as ApiResponse<T>;
         }

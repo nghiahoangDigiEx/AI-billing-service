@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
@@ -10,8 +10,8 @@ import { randomUUID } from 'crypto';
 import { Provider, User } from '@prisma/client';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
-import { InvalidCredentialsException } from '../../../common/exceptions/invalid-credentials.exception';
-import { InvalidRefreshTokenException } from '../../../common/exceptions/invalid-refresh-token.exception';
+import { AppException } from '../../../common/exceptions';
+import { ErrorCode } from '../../../common/enums';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +37,11 @@ export class AuthService {
     const user = await this.userService.findByEmailWithPassword(loginDto.email);
 
     if (!user || !user.password) {
-      throw new InvalidCredentialsException();
+      throw new AppException(
+        ErrorCode.UNAUTHORIZED,
+        'Invalid credentials',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -46,7 +50,11 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new InvalidCredentialsException();
+      throw new AppException(
+        ErrorCode.UNAUTHORIZED,
+        'Invalid credentials',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const accessToken = await this.generateAccessToken(user);
@@ -64,7 +72,11 @@ export class AuthService {
     });
 
     if (!storedToken || storedToken.expiresAt < new Date()) {
-      throw new InvalidRefreshTokenException();
+      throw new AppException(
+        ErrorCode.UNAUTHORIZED,
+        'Invalid refresh token',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const user = storedToken.user;

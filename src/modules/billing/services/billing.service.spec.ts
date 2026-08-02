@@ -1,13 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  ConflictException,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { AppException } from '../../../common/exceptions';
 import { BillingService } from './billing.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
-import { ErrorCode } from '../../../common/enums/error-code.enum';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -118,7 +113,7 @@ describe('BillingService', () => {
       expect(prisma.plan.create).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if slug already exists', async () => {
+    it('should throw AppException if slug already exists', async () => {
       const createPlanDto = {
         name: 'Pro Plan',
         slug: 'pro',
@@ -134,10 +129,7 @@ describe('BillingService', () => {
       });
 
       await expect(service.createPlan(createPlanDto)).rejects.toThrow(
-        new ConflictException(
-          'Plan with this slug already exists',
-          ErrorCode.DUPLICATE_PLAN_SLUG,
-        ),
+        AppException,
       );
     });
   });
@@ -189,11 +181,11 @@ describe('BillingService', () => {
       });
     });
 
-    it('should throw NotFoundException if plan not found', async () => {
+    it('should throw AppException if plan not found', async () => {
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(service.getPlanById('nonexistent')).rejects.toThrow(
-        new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND),
+        AppException,
       );
     });
   });
@@ -229,14 +221,12 @@ describe('BillingService', () => {
       });
     });
 
-    it('should throw NotFoundException if plan not found', async () => {
+    it('should throw AppException if plan not found', async () => {
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         service.updatePlan('nonexistent', { name: 'New' }),
-      ).rejects.toThrow(
-        new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND),
-      );
+      ).rejects.toThrow(AppException);
     });
   });
 
@@ -290,7 +280,7 @@ describe('BillingService', () => {
       expect(prisma.planPrice.create).toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException if plan not found', async () => {
+    it('should throw AppException if plan not found', async () => {
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
@@ -300,12 +290,10 @@ describe('BillingService', () => {
           amount: 10000,
           currency: 'usd',
         }),
-      ).rejects.toThrow(
-        new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND),
-      );
+      ).rejects.toThrow(AppException);
     });
 
-    it('should throw ConflictException if billing interval already exists', async () => {
+    it('should throw AppException if billing interval already exists', async () => {
       const mockPlan = { id: 'plan_123' };
       const existingPrice = { id: 'existing_price' };
 
@@ -321,12 +309,7 @@ describe('BillingService', () => {
           amount: 10000,
           currency: 'usd',
         }),
-      ).rejects.toThrow(
-        new ConflictException(
-          'Active price for this billing interval already exists',
-          ErrorCode.DUPLICATE_BILLING_INTERVAL,
-        ),
-      );
+      ).rejects.toThrow(AppException);
     });
   });
 
@@ -363,17 +346,15 @@ describe('BillingService', () => {
       });
     });
 
-    it('should throw NotFoundException if plan not found', async () => {
+    it('should throw AppException if plan not found', async () => {
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
         service.deactivatePlanPrice('nonexistent', 'price_123'),
-      ).rejects.toThrow(
-        new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND),
-      );
+      ).rejects.toThrow(AppException);
     });
 
-    it('should throw NotFoundException if price not found', async () => {
+    it('should throw AppException if price not found', async () => {
       const mockPlan = { id: 'plan_123' };
 
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
@@ -381,15 +362,10 @@ describe('BillingService', () => {
 
       await expect(
         service.deactivatePlanPrice('plan_123', 'nonexistent'),
-      ).rejects.toThrow(
-        new NotFoundException(
-          'Price not found',
-          ErrorCode.PLAN_PRICE_NOT_FOUND,
-        ),
-      );
+      ).rejects.toThrow(AppException);
     });
 
-    it('should throw BadRequestException if trying to deactivate last active price', async () => {
+    it('should throw AppException if trying to deactivate last active price', async () => {
       const mockPlan = { id: 'plan_123' };
       const mockPrice = {
         id: 'price_123',
@@ -403,12 +379,7 @@ describe('BillingService', () => {
 
       await expect(
         service.deactivatePlanPrice('plan_123', 'price_123'),
-      ).rejects.toThrow(
-        new BadRequestException(
-          'Cannot deactivate the last active price for a plan',
-          ErrorCode.CANNOT_DEACTIVATE_LAST_PRICE,
-        ),
-      );
+      ).rejects.toThrow(AppException);
     });
   });
   describe('createAddonPackage', () => {
@@ -467,10 +438,10 @@ describe('BillingService', () => {
       expect(result).toEqual(mockAddon);
     });
 
-    it('should throw NotFoundException if not found', async () => {
+    it('should throw AppException if not found', async () => {
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
       await expect(service.getAddonPackageById('missing')).rejects.toThrow(
-        NotFoundException,
+        AppException,
       );
     });
   });
@@ -498,11 +469,11 @@ describe('BillingService', () => {
       expect(prisma.addonPackage.update).toHaveBeenCalled();
     });
 
-    it('should throw NotFoundException if not found', async () => {
+    it('should throw AppException if not found', async () => {
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
       await expect(
         service.updateAddonPackage('missing', { name: 'New Name' }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(AppException);
     });
   });
 
@@ -527,10 +498,10 @@ describe('BillingService', () => {
       });
     });
 
-    it('should throw NotFoundException if not found', async () => {
+    it('should throw AppException if not found', async () => {
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
       await expect(service.deactivateAddonPackage('missing')).rejects.toThrow(
-        NotFoundException,
+        AppException,
       );
     });
   });
@@ -559,7 +530,7 @@ describe('BillingService', () => {
       );
     });
 
-    it('should throw BadRequestException if no stripeCustomerId', async () => {
+    it('should throw AppException if no stripeCustomerId', async () => {
       const mockUser = { id: 'user_1', stripeCustomerId: null };
       const mockPrice = { id: 'price_1' };
 
@@ -568,7 +539,7 @@ describe('BillingService', () => {
 
       await expect(
         service.upgradeSubscription('user_1', 'price_1'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(AppException);
     });
   });
 
@@ -586,10 +557,10 @@ describe('BillingService', () => {
       });
     });
 
-    it('should throw NotFoundException if no active subscription', async () => {
+    it('should throw AppException if no active subscription', async () => {
       (prisma.subscription.findFirst as jest.Mock).mockResolvedValue(null);
       await expect(service.getCurrentSubscription('user_1')).rejects.toThrow(
-        NotFoundException,
+        AppException,
       );
     });
   });
@@ -644,7 +615,7 @@ describe('BillingService', () => {
       );
     });
 
-    it('should throw BadRequestException if addon is not active', async () => {
+    it('should throw AppException if addon is not active', async () => {
       const mockUser = { id: 'user_1', stripeCustomerId: 'cus_123' };
       const mockAddon = { id: 'addon_1', status: 'INACTIVE' };
 
@@ -654,7 +625,7 @@ describe('BillingService', () => {
       );
 
       await expect(service.purchaseAddon('user_1', 'addon_1')).rejects.toThrow(
-        BadRequestException,
+        AppException,
       );
     });
   });

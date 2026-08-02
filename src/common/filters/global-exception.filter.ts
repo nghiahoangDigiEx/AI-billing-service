@@ -9,6 +9,7 @@ import {
 /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Response } from 'express';
 import { ErrorCode } from '../enums';
+import { AppException } from '../exceptions';
 import { ApiResponse } from '../interfaces';
 
 @Catch()
@@ -22,8 +23,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let errorCode = ErrorCode.INTERNAL_ERROR;
+    let details: unknown;
 
-    if (exception instanceof HttpException) {
+    if (exception instanceof AppException) {
+      statusCode = exception.getStatus();
+      message = exception.message;
+      errorCode = exception.errorCode;
+      details = exception.details;
+    } else if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       message =
@@ -43,6 +50,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       success: false,
       error: errorCode,
       message,
+      ...(details !== undefined && { details }),
     };
 
     response.status(statusCode).json(responseBody);

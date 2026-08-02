@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User, Role, Provider } from '@prisma/client';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
-import { UserAlreadyExistsException } from '../../../common/exceptions/user-already-exists.exception';
-import { UserNotFoundException } from '../../../common/exceptions/user-not-found.exception';
+import { AppException } from '../../../common/exceptions';
+import { ErrorCode } from '../../../common/enums';
 import { USER_REGISTERED } from '../../../events/event.constants';
 
 export type UserWithoutPassword = Omit<User, 'password' | 'providerId'>;
@@ -57,7 +57,11 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new UserAlreadyExistsException();
+      throw new AppException(
+        ErrorCode.CONFLICT,
+        'User already exists',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const user = await this.prisma.user.create({
@@ -82,7 +86,13 @@ export class UserService {
 
   async getProfile(userId: string): Promise<UserWithoutPassword> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new UserNotFoundException();
+    if (!user) {
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'User not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
     return this.excludePasswordFromUser(user);
   }
 
@@ -104,7 +114,13 @@ export class UserService {
 
   async updateRole(userId: string, role: Role): Promise<UserWithoutPassword> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new UserNotFoundException();
+    if (!user) {
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'User not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },

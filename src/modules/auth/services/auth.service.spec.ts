@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserService } from '../../user/services/user.service';
-import { InvalidCredentialsException } from '../../../common/exceptions/invalid-credentials.exception';
+import { AppException } from '../../../common/exceptions';
 import * as bcrypt from 'bcrypt';
 import { Provider } from '@prisma/client';
 
@@ -116,7 +116,7 @@ describe('AuthService', () => {
 
       await expect(
         service.login({ email: 'test@example.com', password: 'wrong' }),
-      ).rejects.toThrow(InvalidCredentialsException);
+      ).rejects.toThrow(AppException);
     });
   });
 

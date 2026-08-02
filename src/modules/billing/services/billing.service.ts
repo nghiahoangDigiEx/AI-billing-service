@@ -1,9 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
+import { AppException } from '../../../common/exceptions';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
 import { CreatePlanDto } from '../dto/create-plan.dto';
@@ -35,9 +31,10 @@ export class BillingService {
     });
 
     if (existingPlan) {
-      throw new ConflictException(
-        'Plan with this slug already exists',
+      throw new AppException(
         ErrorCode.DUPLICATE_PLAN_SLUG,
+        'Plan with this slug already exists',
+        HttpStatus.CONFLICT,
       );
     }
 
@@ -93,7 +90,11 @@ export class BillingService {
     });
 
     if (!plan) {
-      throw new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND);
+      throw new AppException(
+        ErrorCode.PLAN_NOT_FOUND,
+        'Plan not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     return plan;
@@ -105,7 +106,11 @@ export class BillingService {
     });
 
     if (!plan) {
-      throw new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND);
+      throw new AppException(
+        ErrorCode.PLAN_NOT_FOUND,
+        'Plan not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     if (updatePlanDto.name) {
@@ -132,7 +137,11 @@ export class BillingService {
     });
 
     if (!plan) {
-      throw new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND);
+      throw new AppException(
+        ErrorCode.PLAN_NOT_FOUND,
+        'Plan not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const existingPrice = await this.prisma.planPrice.findFirst({
@@ -144,9 +153,10 @@ export class BillingService {
     });
 
     if (existingPrice) {
-      throw new ConflictException(
-        'Active price for this billing interval already exists',
+      throw new AppException(
         ErrorCode.DUPLICATE_BILLING_INTERVAL,
+        'Active price for this billing interval already exists',
+        HttpStatus.CONFLICT,
       );
     }
 
@@ -176,7 +186,11 @@ export class BillingService {
     });
 
     if (!plan) {
-      throw new NotFoundException('Plan not found', ErrorCode.PLAN_NOT_FOUND);
+      throw new AppException(
+        ErrorCode.PLAN_NOT_FOUND,
+        'Plan not found',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const price = await this.prisma.planPrice.findFirst({
@@ -187,9 +201,10 @@ export class BillingService {
     });
 
     if (!price) {
-      throw new NotFoundException(
-        'Price not found',
+      throw new AppException(
         ErrorCode.PLAN_PRICE_NOT_FOUND,
+        'Price not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -201,9 +216,10 @@ export class BillingService {
     });
 
     if (activePricesCount === 1 && price.status === PlanStatus.ACTIVE) {
-      throw new BadRequestException(
-        'Cannot deactivate the last active price for a plan',
+      throw new AppException(
         ErrorCode.CANNOT_DEACTIVATE_LAST_PRICE,
+        'Cannot deactivate the last active price for a plan',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
@@ -253,9 +269,10 @@ export class BillingService {
     });
 
     if (!addonPackage) {
-      throw new NotFoundException(
-        'Add-on package not found',
+      throw new AppException(
         ErrorCode.ADDON_NOT_FOUND,
+        'Add-on package not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -271,9 +288,10 @@ export class BillingService {
     });
 
     if (!addonPackage) {
-      throw new NotFoundException(
-        'Add-on package not found',
+      throw new AppException(
         ErrorCode.ADDON_NOT_FOUND,
+        'Add-on package not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -298,9 +316,10 @@ export class BillingService {
     });
 
     if (!addonPackage) {
-      throw new NotFoundException(
-        'Add-on package not found',
+      throw new AppException(
         ErrorCode.ADDON_NOT_FOUND,
+        'Add-on package not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -315,19 +334,29 @@ export class BillingService {
   }
   async upgradeSubscription(userId: string, planPriceId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'User not found',
+        HttpStatus.NOT_FOUND,
+      );
 
     const price = await this.prisma.planPrice.findUnique({
       where: { id: planPriceId },
     });
     if (!price)
-      throw new NotFoundException(
-        'Plan price not found',
+      throw new AppException(
         ErrorCode.PLAN_PRICE_NOT_FOUND,
+        'Plan price not found',
+        HttpStatus.NOT_FOUND,
       );
 
     if (!user.stripeCustomerId) {
-      throw new BadRequestException('User does not have a Stripe customer ID');
+      throw new AppException(
+        ErrorCode.BAD_REQUEST,
+        'User does not have a Stripe customer ID',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const stripeSub = await this.stripeService.createSubscription(
@@ -345,9 +374,10 @@ export class BillingService {
     });
 
     if (!subscription) {
-      throw new NotFoundException(
-        'Active subscription not found',
+      throw new AppException(
         ErrorCode.SUBSCRIPTION_NOT_FOUND,
+        'Active subscription not found',
+        HttpStatus.NOT_FOUND,
       );
     }
 
@@ -363,21 +393,35 @@ export class BillingService {
   }
   async purchaseAddon(userId: string, addonId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'User not found',
+        HttpStatus.NOT_FOUND,
+      );
 
     const addon = await this.prisma.addonPackage.findUnique({
       where: { id: addonId },
     });
     if (!addon)
-      throw new NotFoundException(
-        'Add-on package not found',
+      throw new AppException(
         ErrorCode.ADDON_NOT_FOUND,
+        'Add-on package not found',
+        HttpStatus.NOT_FOUND,
       );
     if (addon.status !== PlanStatus.ACTIVE)
-      throw new BadRequestException('Add-on package is not active');
+      throw new AppException(
+        ErrorCode.BAD_REQUEST,
+        'Add-on package is not active',
+        HttpStatus.BAD_REQUEST,
+      );
 
     if (!user.stripeCustomerId) {
-      throw new BadRequestException('User does not have a Stripe customer ID');
+      throw new AppException(
+        ErrorCode.BAD_REQUEST,
+        'User does not have a Stripe customer ID',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const paymentIntent = await this.stripeService.createPaymentIntent(

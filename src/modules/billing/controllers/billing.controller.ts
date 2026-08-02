@@ -9,6 +9,7 @@ import {
   Param,
   Patch,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,20 +17,24 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 import { BillingService } from '../services/billing.service';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreatePlanPriceDto } from '../dto/create-plan-price.dto';
-import { AdminOnly } from '../decorators/admin-only.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @ApiTags('Admin - Plans')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 @Controller('admin/plans')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
   @Post()
-  @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new plan (Admin only)' })
   @ApiStandardResponse({
@@ -45,7 +50,6 @@ export class BillingController {
   }
 
   @Get()
-  @AdminOnly()
   @ApiOperation({ summary: 'Get all plans (Admin only)' })
   @ApiStandardResponse({ status: 200, description: 'List of all plans' })
   async getAllPlans() {
@@ -53,7 +57,6 @@ export class BillingController {
   }
 
   @Get(':id')
-  @AdminOnly()
   @ApiOperation({ summary: 'Get plan by ID (Admin only)' })
   @ApiStandardResponse({ status: 200, description: 'Plan details' })
   @ApiResponse({ status: 404, description: 'Plan not found' })
@@ -62,7 +65,6 @@ export class BillingController {
   }
 
   @Patch(':id')
-  @AdminOnly()
   @ApiOperation({ summary: 'Update plan (Admin only)' })
   @ApiStandardResponse({
     status: 200,
@@ -77,7 +79,6 @@ export class BillingController {
   }
 
   @Post(':id/prices')
-  @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add price to plan (Admin only)' })
   @ApiStandardResponse({ status: 201, description: 'Price added successfully' })
@@ -91,7 +92,6 @@ export class BillingController {
   }
 
   @Delete(':planId/prices/:priceId')
-  @AdminOnly()
   @ApiOperation({ summary: 'Deactivate plan price (Admin only)' })
   @ApiStandardResponse({
     status: 200,

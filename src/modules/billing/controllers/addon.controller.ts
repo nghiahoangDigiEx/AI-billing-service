@@ -9,6 +9,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -16,19 +17,23 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Role } from '@prisma/client';
 import { BillingService } from '../services/billing.service';
 import { CreateAddonPackageDto } from '../dto/create-addon-package.dto';
 import { UpdateAddonPackageDto } from '../dto/update-addon-package.dto';
-import { AdminOnly } from '../decorators/admin-only.decorator';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @ApiTags('Admin - Add-ons')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 @Controller('admin/addons')
 export class AddonController {
   constructor(private readonly billingService: BillingService) {}
 
   @Post()
-  @AdminOnly()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new add-on package (Admin only)' })
   @ApiStandardResponse({
@@ -46,7 +51,6 @@ export class AddonController {
   }
 
   @Get()
-  @AdminOnly()
   @ApiOperation({ summary: 'Get all add-on packages (Admin only)' })
   @ApiStandardResponse({
     status: 200,
@@ -57,7 +61,6 @@ export class AddonController {
   }
 
   @Get(':id')
-  @AdminOnly()
   @ApiOperation({ summary: 'Get add-on package by ID (Admin only)' })
   @ApiStandardResponse({ status: 200, description: 'Add-on package details' })
   @ApiResponse({ status: 404, description: 'Add-on package not found' })
@@ -66,7 +69,6 @@ export class AddonController {
   }
 
   @Patch(':id')
-  @AdminOnly()
   @ApiOperation({ summary: 'Update add-on package (Admin only)' })
   @ApiStandardResponse({
     status: 200,
@@ -81,7 +83,6 @@ export class AddonController {
   }
 
   @Delete(':id')
-  @AdminOnly()
   @ApiOperation({ summary: 'Deactivate add-on package (Admin only)' })
   @ApiStandardResponse({
     status: 200,

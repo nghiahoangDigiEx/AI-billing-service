@@ -2,8 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from './user.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { UserAlreadyExistsException } from '../../../common/exceptions/user-already-exists.exception';
-import { UserNotFoundException } from '../../../common/exceptions/user-not-found.exception';
+import { AppException } from '../../../common/exceptions';
 import { Role } from '@prisma/client';
 import { USER_REGISTERED } from '../../../events/event.constants';
 
@@ -76,7 +75,7 @@ describe('UserService', () => {
           name: 'Test',
           password: 'pass',
         }),
-      ).rejects.toThrow(UserAlreadyExistsException);
+      ).rejects.toThrow(AppException);
     });
   });
 
@@ -131,7 +130,7 @@ describe('UserService', () => {
     it('throws UserNotFoundException for non-existent user', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       await expect(service.updateRole('1', Role.ADMIN)).rejects.toThrow(
-        UserNotFoundException,
+        AppException,
       );
     });
   });
