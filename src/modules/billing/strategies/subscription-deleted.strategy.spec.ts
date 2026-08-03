@@ -43,24 +43,18 @@ describe('SubscriptionDeletedStrategy', () => {
   });
 
   it('should handle customer.subscription.deleted event', async () => {
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.subscription.findFirst.mockResolvedValue({
+    (prisma.subscription.findFirst as jest.Mock).mockResolvedValue({
       id: 'sub_1',
       userId: 'user_1',
     });
 
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.plan.findUnique.mockResolvedValue({
+    (prisma.plan.findUnique as jest.Mock).mockResolvedValue({
       id: 'plan_free',
       prices: [{ id: 'price_free' }],
       creditsIncluded: 10,
     });
 
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.subscription.create.mockResolvedValue({
+    (prisma.subscription.create as jest.Mock).mockResolvedValue({
       id: 'sub_2',
       currentPeriodStart: new Date(),
       currentPeriodEnd: new Date(),

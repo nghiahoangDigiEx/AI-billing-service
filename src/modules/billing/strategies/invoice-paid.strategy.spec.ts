@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { InvoicePaidStrategy } from './invoice-paid.strategy';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 
@@ -42,21 +43,15 @@ describe('InvoicePaidStrategy', () => {
   });
 
   it('should handle invoice.paid event', async () => {
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.user.findFirst.mockResolvedValue({ id: 'user_1' });
+    (prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'user_1' });
 
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.planPrice.findFirst.mockResolvedValue({
+    (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue({
       id: 'price_1',
       planId: 'plan_1',
       plan: { creditsIncluded: 100 },
     });
 
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.subscription.findFirst.mockResolvedValue({
+    (prisma.subscription.findFirst as jest.Mock).mockResolvedValue({
       id: 'sub_1',
       planPriceId: 'price_1',
     });
@@ -78,16 +73,16 @@ describe('InvoicePaidStrategy', () => {
 
     await strategy.handle(mockEvent);
 
-    expect(prisma.subscription.update as jest.Mock).toHaveBeenCalledWith({
-      where: { id: 'sub_1' },
-      data: {
-        status: 'ACTIVE',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        currentPeriodStart: expect.any(Date),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        currentPeriodEnd: expect.any(Date),
-      },
-    });
+    const callArgs = (
+      prisma.subscription.update as jest.Mock<
+        any,
+        [Prisma.SubscriptionUpdateArgs]
+      >
+    ).mock.calls[0][0];
+    expect(callArgs.where).toEqual({ id: 'sub_1' });
+    expect(callArgs.data.status).toEqual('ACTIVE');
+    expect(callArgs.data.currentPeriodStart).toBeInstanceOf(Date);
+    expect(callArgs.data.currentPeriodEnd).toBeInstanceOf(Date);
     expect(prisma.creditBalance.updateMany as jest.Mock).toHaveBeenCalledTimes(
       2,
     );

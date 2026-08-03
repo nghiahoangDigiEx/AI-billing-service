@@ -49,6 +49,7 @@ enum WebhookEventStatus {
   PENDING
   PROCESSED
   FAILED
+  UNHANDLED
 }
 
 model User {

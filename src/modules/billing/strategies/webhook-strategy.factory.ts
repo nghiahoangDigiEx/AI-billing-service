@@ -1,34 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { StripeEventStrategy } from './stripe-event.strategy';
-import { InvoicePaidStrategy } from './invoice-paid.strategy';
-import { InvoicePaymentFailedStrategy } from './invoice-payment-failed.strategy';
-import { SubscriptionDeletedStrategy } from './subscription-deleted.strategy';
-import { PaymentIntentSucceededStrategy } from './payment-intent-succeeded.strategy';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import { WebhookStrategy } from './webhook-strategy.interface';
 
 @Injectable()
 export class WebhookStrategyFactory {
   private readonly logger = new Logger(WebhookStrategyFactory.name);
 
   constructor(
-    private readonly invoicePaidStrategy: InvoicePaidStrategy,
-    private readonly invoicePaymentFailedStrategy: InvoicePaymentFailedStrategy,
-    private readonly subscriptionDeletedStrategy: SubscriptionDeletedStrategy,
-    private readonly paymentIntentSucceededStrategy: PaymentIntentSucceededStrategy,
+    @Inject('WEBHOOK_STRATEGIES')
+    private readonly strategies: WebhookStrategy[],
   ) {}
 
-  getStrategy(eventType: string): StripeEventStrategy | null {
-    switch (eventType) {
-      case 'invoice.paid':
-        return this.invoicePaidStrategy;
-      case 'invoice.payment_failed':
-        return this.invoicePaymentFailedStrategy;
-      case 'customer.subscription.deleted':
-        return this.subscriptionDeletedStrategy;
-      case 'payment_intent.succeeded':
-        return this.paymentIntentSucceededStrategy;
-      default:
-        this.logger.log(`No strategy found for event type: ${eventType}`);
-        return null;
-    }
+  getStrategy(eventType: string): WebhookStrategy | undefined {
+    return this.strategies.find((strategy) => strategy.canHandle(eventType));
   }
 }

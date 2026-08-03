@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WebhookService } from './webhook.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { WebhookStrategyFactory } from '../strategies/webhook-strategy.factory';
 import Stripe from 'stripe';
+import { WebhookEventStatus, Prisma } from '@prisma/client';
 
 describe('WebhookService', () => {
   let service: WebhookService;
   let prisma: jest.Mocked<PrismaService>;
-  let eventEmitter: jest.Mocked<EventEmitter2>;
+  let strategyFactory: jest.Mocked<WebhookStrategyFactory>;
 
   beforeEach(async () => {
     const mockPrisma = {
@@ -17,33 +19,14 @@ describe('WebhookService', () => {
         create: jest.fn(),
         update: jest.fn(),
       },
-      subscription: {
-        findUnique: jest.fn(),
-        update: jest.fn(),
-        create: jest.fn(),
-      },
-      creditBalance: {
-        updateMany: jest.fn(),
-        create: jest.fn(),
-      },
-      plan: {
-        findUnique: jest.fn(),
-      },
-      addonPackage: {
-        findUnique: jest.fn(),
-      },
-      addonPurchase: {
-        create: jest.fn(),
-      },
-      $transaction: jest
-        .fn()
-        .mockImplementation((cb: (p: any) => Promise<unknown>) =>
-          cb(mockPrisma),
-        ),
     };
 
     const mockEventEmitter = {
       emit: jest.fn(),
+    };
+
+    const mockStrategyFactory = {
+      getStrategy: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -51,208 +34,124 @@ describe('WebhookService', () => {
         WebhookService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: WebhookStrategyFactory, useValue: mockStrategyFactory },
       ],
     }).compile();
 
     service = module.get<WebhookService>(WebhookService);
     prisma = module.get(PrismaService);
-    eventEmitter = module.get(EventEmitter2);
+    strategyFactory = module.get(WebhookStrategyFactory);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('processEvent', () => {
+  describe('handleEvent', () => {
     it('should skip if event was already processed', async () => {
       (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue({
-        status: 'PROCESSED',
+        status: WebhookEventStatus.PROCESSED,
       });
 
       const mockEvent = { id: 'evt_1', type: 'invoice.paid' } as Stripe.Event;
-      await service.processEvent(mockEvent);
+      await service.handleEvent(mockEvent);
 
       expect(prisma.webhookEvent.create).not.toHaveBeenCalled();
       expect(prisma.webhookEvent.update).not.toHaveBeenCalled();
+      expect(strategyFactory.getStrategy).not.toHaveBeenCalled();
     });
 
-    it('should handle invoice.paid event', async () => {
+    it('should call strategy and update status to PROCESSED', async () => {
       (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue(null);
-      const mockSub = {
-        id: 'sub_1',
-        userId: 'user_1',
-        status: 'PAST_DUE',
-        plan: { creditsIncluded: 1000 },
+
+      const mockStrategy = {
+        canHandle: jest.fn().mockReturnValue(true),
+        handle: jest.fn().mockResolvedValue(undefined),
       };
-      (prisma.subscription.findUnique as jest.Mock).mockResolvedValue(mockSub);
+      strategyFactory.getStrategy.mockReturnValue(mockStrategy);
+
+      const mockEvent = { id: 'evt_1', type: 'invoice.paid' } as Stripe.Event;
+      await service.handleEvent(mockEvent);
+
+      expect(strategyFactory.getStrategy).toHaveBeenCalledWith('invoice.paid');
+      expect(mockStrategy.handle).toHaveBeenCalledWith(mockEvent);
+
+      const callArgs = (
+        prisma.webhookEvent.update as jest.Mock<
+          any,
+          [Prisma.WebhookEventUpdateArgs]
+        >
+      ).mock.calls[0][0];
+      expect(callArgs.where).toEqual({ stripeEventId: 'evt_1' });
+      expect(callArgs.data.status).toEqual(WebhookEventStatus.PROCESSED);
+    });
+
+    it('should mark event as UNHANDLED if no strategy is found', async () => {
+      (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue(null);
+
+      strategyFactory.getStrategy.mockReturnValue(undefined);
 
       const mockEvent = {
         id: 'evt_1',
-        type: 'invoice.paid',
-        data: {
-          object: {
-            id: 'inv_1',
-            subscription: 'sub_stripe_1',
-            lines: { data: [{ period: { start: 1000, end: 2000 } }] },
-          },
-        },
+        type: 'unknown.event',
       } as unknown as Stripe.Event;
+      await service.handleEvent(mockEvent);
 
-      await service.processEvent(mockEvent);
+      expect(strategyFactory.getStrategy).toHaveBeenCalledWith('unknown.event');
 
-      expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub_1' },
-        data: { status: 'ACTIVE' },
-      });
-      expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
-        where: { userId: 'user_1', source: 'MONTHLY', status: 'ACTIVE' },
-        data: { status: 'EXHAUSTED' },
-      });
-      expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
-        where: { userId: 'user_1', source: 'ADDON', status: 'FROZEN' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: { status: 'ACTIVE', unfrozenAt: expect.any(Date) },
-      });
-      expect(prisma.creditBalance.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
-            source: 'MONTHLY',
-            sourceRef: 'inv_1',
-            totalCredits: 1000,
-          }),
-        }),
-      );
-      expect(eventEmitter.emit).toHaveBeenCalledWith('invoice.paid', {
-        subscriptionId: 'sub_1',
-      });
-      expect(prisma.webhookEvent.update).toHaveBeenCalledWith({
-        where: { stripeEventId: 'evt_1' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: { status: 'PROCESSED', processedAt: expect.any(Date) },
-      });
+      const callArgs = (
+        prisma.webhookEvent.update as jest.Mock<
+          any,
+          [Prisma.WebhookEventUpdateArgs]
+        >
+      ).mock.calls[0][0];
+      expect(callArgs.where).toEqual({ stripeEventId: 'evt_1' });
+      expect(callArgs.data.status).toEqual(WebhookEventStatus.UNHANDLED);
     });
 
-    it('should handle invoice.payment_failed event', async () => {
+    it('should mark event as FAILED if strategy throws error', async () => {
       (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue(null);
-      const mockSub = { id: 'sub_1', userId: 'user_1' };
-      (prisma.subscription.findUnique as jest.Mock).mockResolvedValue(mockSub);
 
-      const mockEvent = {
-        id: 'evt_2',
-        type: 'invoice.payment_failed',
-        data: { object: { subscription: 'sub_stripe_1' } },
-      } as unknown as Stripe.Event;
+      const mockStrategy = {
+        canHandle: jest.fn().mockReturnValue(true),
+        handle: jest.fn().mockRejectedValue(new Error('Strategy Error')),
+      };
+      strategyFactory.getStrategy.mockReturnValue(mockStrategy);
 
-      await service.processEvent(mockEvent);
+      const mockEvent = { id: 'evt_1', type: 'invoice.paid' } as Stripe.Event;
 
-      expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub_1' },
-        data: { status: 'PAST_DUE' },
-      });
-      expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
-        where: { userId: 'user_1', source: 'ADDON', status: 'ACTIVE' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: { status: 'FROZEN', frozenAt: expect.any(Date) },
-      });
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        'subscription.payment_failed',
-        { subscriptionId: 'sub_1' },
-      );
+      await service.handleEvent(mockEvent);
+
+      const callArgs = (
+        prisma.webhookEvent.update as jest.Mock<
+          any,
+          [Prisma.WebhookEventUpdateArgs]
+        >
+      ).mock.calls[0][0];
+      expect(callArgs.where).toEqual({ stripeEventId: 'evt_1' });
+      expect(callArgs.data.status).toEqual(WebhookEventStatus.FAILED);
+      expect(callArgs.data.errorMessage).toEqual('Strategy Error');
     });
 
-    it('should handle customer.subscription.deleted event', async () => {
+    it('should throw if error is a unique constraint violation', async () => {
       (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue(null);
-      const mockSub = { id: 'sub_1', userId: 'user_1' };
-      (prisma.subscription.findUnique as jest.Mock).mockResolvedValue(mockSub);
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue({
-        id: 'plan_free',
-        creditsIncluded: 100,
-        prices: [{ id: 'price_free' }],
-      });
-      (prisma.subscription.create as jest.Mock).mockResolvedValue({
-        id: 'sub_free',
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: new Date(),
-      });
 
-      const mockEvent = {
-        id: 'evt_3',
-        type: 'customer.subscription.deleted',
-        data: { object: { id: 'sub_stripe_1' } },
-      } as unknown as Stripe.Event;
+      const error = new Error('Unique constraint failed') as Error & {
+        code: string;
+      };
+      error.code = 'P2002';
 
-      await service.processEvent(mockEvent);
+      const mockStrategy = {
+        canHandle: jest.fn().mockReturnValue(true),
+        handle: jest.fn().mockRejectedValue(error),
+      };
+      strategyFactory.getStrategy.mockReturnValue(mockStrategy);
 
-      expect(prisma.subscription.update).toHaveBeenCalledWith({
-        where: { id: 'sub_1' },
-        data: { status: 'CANCELLED' },
-      });
-      expect(prisma.subscription.create).toHaveBeenCalled();
-      expect(prisma.creditBalance.updateMany).toHaveBeenCalledWith({
-        where: { userId: 'user_1', source: 'ADDON', status: 'ACTIVE' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        data: { status: 'FROZEN', frozenAt: expect.any(Date) },
-      });
-      expect(prisma.creditBalance.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
-            source: 'MONTHLY',
-            sourceRef: 'sub_free',
-            totalCredits: 100,
-          }),
-        }),
+      const mockEvent = { id: 'evt_2', type: 'invoice.paid' } as Stripe.Event;
+
+      await expect(service.handleEvent(mockEvent)).rejects.toThrow(
+        'Unique constraint failed',
       );
-      expect(eventEmitter.emit).toHaveBeenCalledWith('subscription.deleted', {
-        subscriptionId: 'sub_1',
-      });
-    });
-
-    it('should handle payment_intent.succeeded event', async () => {
-      (prisma.webhookEvent.findUnique as jest.Mock).mockResolvedValue(null);
-      const mockAddon = { id: 'addon_1', credits: 50 };
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
-      (prisma.addonPurchase.create as jest.Mock).mockResolvedValue({
-        id: 'purchase_1',
-      });
-
-      const mockEvent = {
-        id: 'evt_4',
-        type: 'payment_intent.succeeded',
-        data: {
-          object: {
-            id: 'pi_1',
-            metadata: { userId: 'user_1', addonPackageId: 'addon_1' },
-          },
-        },
-      } as unknown as Stripe.Event;
-
-      await service.processEvent(mockEvent);
-
-      expect(prisma.addonPurchase.create).toHaveBeenCalledWith({
-        data: {
-          userId: 'user_1',
-          addonPackageId: 'addon_1',
-          stripePaymentIntentId: 'pi_1',
-        },
-      });
-      expect(prisma.creditBalance.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: expect.objectContaining({
-            source: 'ADDON',
-            sourceRef: 'purchase_1',
-            totalCredits: 50,
-          }),
-        }),
-      );
-      expect(eventEmitter.emit).toHaveBeenCalledWith('addon.purchased', {
-        userId: 'user_1',
-        addonPackageId: 'addon_1',
-      });
     });
   });
 });

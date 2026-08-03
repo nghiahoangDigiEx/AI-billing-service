@@ -2,18 +2,22 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
-import { StripeEventStrategy } from './stripe-event.strategy';
+import { WebhookStrategy } from './webhook-strategy.interface';
 import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
 import { INVOICE_PAID } from '../../../events/event.constants';
 
 @Injectable()
-export class InvoicePaidStrategy implements StripeEventStrategy {
+export class InvoicePaidStrategy implements WebhookStrategy {
   private readonly logger = new Logger(InvoicePaidStrategy.name);
 
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
   ) {}
+
+  canHandle(eventType: string): boolean {
+    return eventType === 'invoice.paid';
+  }
 
   async handle(event: Stripe.Event): Promise<void> {
     const invoice = event.data.object as Stripe.Invoice;

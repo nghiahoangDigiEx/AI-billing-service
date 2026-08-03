@@ -44,7 +44,7 @@ export class WebhookController {
     }
 
     try {
-      await this.webhookService.processEvent(event);
+      await this.webhookService.handleEvent(event);
       return { received: true };
     } catch (err) {
       const error = err as Error;

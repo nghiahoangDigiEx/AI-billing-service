@@ -39,13 +39,9 @@ describe('InvoicePaymentFailedStrategy', () => {
   });
 
   it('should handle invoice.payment_failed event', async () => {
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.user.findFirst.mockResolvedValue({ id: 'user_1' });
+    (prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'user_1' });
 
-    // @ts-expect-error type override for testing
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    prisma.subscription.findFirst.mockResolvedValue({
+    (prisma.subscription.findFirst as jest.Mock).mockResolvedValue({
       id: 'sub_1',
     });
 

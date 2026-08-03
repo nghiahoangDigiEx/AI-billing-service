@@ -4,8 +4,6 @@ import { StripeService } from './stripe.service';
 
 describe('StripeService', () => {
   let service: StripeService;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let _configService: ConfigService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,7 +23,6 @@ describe('StripeService', () => {
     }).compile();
 
     service = module.get<StripeService>(StripeService);
-    _configService = module.get<ConfigService>(ConfigService);
   });
 
   it('should be defined', () => {

@@ -2,18 +2,22 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
-import { StripeEventStrategy } from './stripe-event.strategy';
+import { WebhookStrategy } from './webhook-strategy.interface';
 import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
 import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
 
 @Injectable()
-export class SubscriptionDeletedStrategy implements StripeEventStrategy {
+export class SubscriptionDeletedStrategy implements WebhookStrategy {
   private readonly logger = new Logger(SubscriptionDeletedStrategy.name);
 
   constructor(
     private prisma: PrismaService,
-    private eventEmitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  canHandle(eventType: string): boolean {
+    return eventType === 'customer.subscription.deleted';
+  }
 
   async handle(event: Stripe.Event): Promise<void> {
     const stripeSub = event.data.object as Stripe.Subscription;
