@@ -4,9 +4,15 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AppLoggerService } from './common/logger/app-logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+    bufferLogs: true,
+  });
+
+  app.useLogger(app.get(AppLoggerService));
 
   app.useGlobalPipes(
     new ValidationPipe({

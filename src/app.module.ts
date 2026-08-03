@@ -9,9 +9,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
+    LoggerModule,
     ConfigModule.forRoot({
       isGlobal: true,
     }),
