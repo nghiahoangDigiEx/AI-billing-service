@@ -25,20 +25,18 @@ export class WebhookController {
   @Post('stripe')
   async handleStripeWebhook(
     @Headers('stripe-signature') signature: string,
-    @Req() req: any,
+    @Req() req: Request & { rawBody: Buffer },
   ) {
     if (!signature) {
       throw new BadRequestException('Missing stripe-signature header');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (!req.rawBody) {
       throw new BadRequestException('Missing raw body');
     }
 
     let event: Stripe.Event;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       event = this.stripeService.verifyWebhookSignature(req.rawBody, signature);
     } catch (err) {
       const error = err as Error;

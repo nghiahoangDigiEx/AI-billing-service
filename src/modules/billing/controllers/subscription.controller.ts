@@ -29,11 +29,10 @@ export class SubscriptionController {
     description: 'Upgrade process initiated successfully',
   })
   async upgradeSubscription(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: string },
     @Body() upgradeSubscriptionDto: UpgradeSubscriptionDto,
   ) {
     return this.billingService.upgradeSubscription(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       user.id,
       upgradeSubscriptionDto.planPriceId,
     );
@@ -45,8 +44,7 @@ export class SubscriptionController {
     status: 200,
     description: 'Current active subscription',
   })
-  async getCurrentSubscription(@CurrentUser() user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  async getCurrentSubscription(@CurrentUser() user: { id: string }) {
     return this.billingService.getCurrentSubscription(user.id);
   }
 
@@ -56,8 +54,7 @@ export class SubscriptionController {
     status: 200,
     description: 'List of all subscriptions',
   })
-  async getSubscriptionHistory(@CurrentUser() user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  async getSubscriptionHistory(@CurrentUser() user: { id: string }) {
     return this.billingService.getSubscriptionHistory(user.id);
   }
 
@@ -69,8 +66,10 @@ export class SubscriptionController {
     status: 202,
     description: 'Purchase initiated successfully',
   })
-  async purchaseAddon(@CurrentUser() user: any, @Param('id') id: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  async purchaseAddon(
+    @CurrentUser() user: { id: string },
+    @Param('id') id: string,
+  ) {
     return this.billingService.purchaseAddon(user.id, id);
   }
 
@@ -80,8 +79,7 @@ export class SubscriptionController {
     status: 200,
     description: 'List of active and frozen add-on purchases',
   })
-  async getUserAddonPurchases(@CurrentUser() user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  async getUserAddonPurchases(@CurrentUser() user: { id: string }) {
     return this.billingService.getUserAddonPurchases(user.id);
   }
 
@@ -91,8 +89,7 @@ export class SubscriptionController {
     status: 200,
     description: 'List of all add-on purchases',
   })
-  async getUserAddonHistory(@CurrentUser() user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+  async getUserAddonHistory(@CurrentUser() user: { id: string }) {
     return this.billingService.getUserAddonHistory(user.id);
   }
 }

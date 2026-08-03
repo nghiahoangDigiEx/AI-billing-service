@@ -56,9 +56,7 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('hashes password and calls userService.createUser', async () => {
-      // @ts-expect-error override
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      bcrypt.hash.mockResolvedValue('hashed_password');
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
       userService.createUser.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
@@ -89,9 +87,7 @@ describe('AuthService', () => {
         password: 'hashed_password',
       });
 
-      // @ts-expect-error override
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      bcrypt.compare.mockResolvedValue(true);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       jwtService.signAsync.mockResolvedValue('access_token');
       prisma.refreshToken.create.mockResolvedValue({});
 
@@ -110,9 +106,7 @@ describe('AuthService', () => {
         password: 'hashed_password',
       });
 
-      // @ts-expect-error override
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      bcrypt.compare.mockResolvedValue(false);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
         service.login({ email: 'test@example.com', password: 'wrong' }),

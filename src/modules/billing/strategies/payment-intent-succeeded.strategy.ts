@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import { StripeEventStrategy } from './stripe-event.strategy';
 import { ADDON_PURCHASED } from '../../../events/event.constants';
+import { CreditSource, CreditStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentIntentSucceededStrategy implements StripeEventStrategy {
@@ -47,11 +48,11 @@ export class PaymentIntentSucceededStrategy implements StripeEventStrategy {
       await tx.creditBalance.create({
         data: {
           userId,
-          source: 'ADDON',
+          source: CreditSource.ADDON,
           sourceRef: purchase.id,
           totalCredits: addonPackage.credits,
           remainingCredits: addonPackage.credits,
-          status: 'ACTIVE',
+          status: CreditStatus.ACTIVE,
           purchasedAt: new Date(),
         },
       });

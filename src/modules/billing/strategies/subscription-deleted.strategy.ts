@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import Stripe from 'stripe';
 import { StripeEventStrategy } from './stripe-event.strategy';
 import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
+import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
 
 @Injectable()
 export class SubscriptionDeletedStrategy implements StripeEventStrategy {
@@ -18,7 +19,10 @@ export class SubscriptionDeletedStrategy implements StripeEventStrategy {
     const stripeSub = event.data.object as Stripe.Subscription;
 
     const subscription = await this.prisma.subscription.findFirst({
-      where: { stripeSubscriptionId: stripeSub.id, status: 'ACTIVE' },
+      where: {
+        stripeSubscriptionId: stripeSub.id,
+        status: SubscriptionStatus.ACTIVE,
+      },
     });
 
     if (!subscription) {
@@ -41,7 +45,7 @@ export class SubscriptionDeletedStrategy implements StripeEventStrategy {
       await tx.subscription.update({
         where: { id: subscription.id },
         data: {
-          status: 'CANCELLED',
+          status: SubscriptionStatus.CANCELLED,
         },
       });
 
@@ -51,7 +55,7 @@ export class SubscriptionDeletedStrategy implements StripeEventStrategy {
           planId: freePlan.id,
           planPriceId: freePlanPrice.id,
           stripeSubscriptionId: null, // Local free subscription has no Stripe ID
-          status: 'ACTIVE',
+          status: SubscriptionStatus.ACTIVE,
           currentPeriodStart: new Date(),
           currentPeriodEnd: new Date(
             new Date().setMonth(new Date().getMonth() + 1),
@@ -63,21 +67,21 @@ export class SubscriptionDeletedStrategy implements StripeEventStrategy {
       await tx.creditBalance.updateMany({
         where: {
           userId: subscription.userId,
-          source: 'ADDON',
-          status: 'ACTIVE',
+          source: CreditSource.ADDON,
+          status: CreditStatus.ACTIVE,
         },
-        data: { status: 'FROZEN', frozenAt: new Date() },
+        data: { status: CreditStatus.FROZEN, frozenAt: new Date() },
       });
 
       // Create MONTHLY for Free
       await tx.creditBalance.create({
         data: {
           userId: subscription.userId,
-          source: 'MONTHLY',
+          source: CreditSource.MONTHLY,
           sourceRef: newSub.id,
           totalCredits: freePlan.creditsIncluded,
           remainingCredits: freePlan.creditsIncluded,
-          status: 'ACTIVE',
+          status: CreditStatus.ACTIVE,
           periodStart: newSub.currentPeriodStart,
           periodEnd: newSub.currentPeriodEnd,
         },

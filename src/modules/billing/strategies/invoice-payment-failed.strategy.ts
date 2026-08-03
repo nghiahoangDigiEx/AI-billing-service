@@ -48,7 +48,7 @@ export class InvoicePaymentFailedStrategy implements StripeEventStrategy {
       where: {
         stripeSubscriptionId,
         userId: user.id,
-        status: 'ACTIVE',
+        status: SubscriptionStatus.ACTIVE,
       },
     });
 

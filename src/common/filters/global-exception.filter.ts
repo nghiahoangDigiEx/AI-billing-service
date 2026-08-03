@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { Response } from 'express';
 import { ErrorCode } from '../enums';
 import { AppException } from '../exceptions';
@@ -56,7 +55,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     response.status(statusCode).json(responseBody);
   }
 
-  private mapStatusToErrorCode(statusCode: number): ErrorCode {
+  private mapStatusToErrorCode(statusCode: unknown): ErrorCode {
     switch (statusCode) {
       case HttpStatus.BAD_REQUEST:
         return ErrorCode.BAD_REQUEST;
