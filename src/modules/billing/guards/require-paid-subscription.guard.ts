@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ErrorCode } from '../../../common/enums/error-code.enum';
+import { PLAN_SLUGS } from '../constants/billing.constants';
 
 import { User, SubscriptionStatus } from '@prisma/client';
 
@@ -42,7 +43,7 @@ export class RequirePaidSubscriptionGuard implements CanActivate {
       },
     });
 
-    if (!subscription || subscription.plan.slug === 'free') {
+    if (!subscription || subscription.plan.slug === PLAN_SLUGS.FREE) {
       throw new ForbiddenException(
         'Paid subscription required',
         ErrorCode.SUBSCRIPTION_NOT_FOUND,

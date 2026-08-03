@@ -3,6 +3,7 @@ import { AppException } from '../../../common/exceptions';
 import { BillingService } from './billing.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from './stripe.service';
+import { BillingInterval } from '@prisma/client';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -72,8 +73,8 @@ describe('BillingService', () => {
         name: 'Pro Plan',
         slug: 'pro',
         creditsIncluded: 1000,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        billingInterval: 'MONTH' as any,
+
+        billingInterval: BillingInterval.MONTH,
         amount: 1000,
         currency: 'usd',
       };
@@ -118,8 +119,8 @@ describe('BillingService', () => {
         name: 'Pro Plan',
         slug: 'pro',
         creditsIncluded: 1000,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        billingInterval: 'MONTH' as any,
+
+        billingInterval: BillingInterval.MONTH,
         amount: 1000,
         currency: 'usd',
       };
@@ -240,8 +241,8 @@ describe('BillingService', () => {
       const mockPrice = {
         id: 'price_123',
         planId: 'plan_123',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        billingInterval: 'YEAR' as any,
+
+        billingInterval: BillingInterval.YEAR,
         amount: 10000,
         currency: 'usd',
       };
@@ -266,8 +267,8 @@ describe('BillingService', () => {
       expect(prisma.planPrice.findFirst).toHaveBeenCalledWith({
         where: {
           planId: 'plan_123',
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          billingInterval: 'YEAR' as any,
+
+          billingInterval: BillingInterval.YEAR,
           status: 'ACTIVE',
         },
       });
@@ -285,8 +286,7 @@ describe('BillingService', () => {
 
       await expect(
         service.addPriceToPlan('nonexistent', {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          billingInterval: 'YEAR' as any,
+          billingInterval: BillingInterval.YEAR,
           amount: 10000,
           currency: 'usd',
         }),
@@ -304,8 +304,7 @@ describe('BillingService', () => {
 
       await expect(
         service.addPriceToPlan('plan_123', {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          billingInterval: 'YEAR' as any,
+          billingInterval: BillingInterval.YEAR,
           amount: 10000,
           currency: 'usd',
         }),
