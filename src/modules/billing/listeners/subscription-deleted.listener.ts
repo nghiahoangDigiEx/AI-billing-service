@@ -3,7 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '../../../events/payment.events';
 import type { SubscriptionDeletedEvent } from '../../../events/payment.events';
-import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { SubscriptionStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
 
@@ -42,6 +42,10 @@ export class SubscriptionDeletedListener {
     }
     const freePlanPrice = freePlan.prices[0];
 
+    let newSubId!: string;
+    const periodStart = new Date();
+    const periodEnd = new Date(new Date().setMonth(new Date().getMonth() + 1));
+
     await this.prisma.$transaction(async (tx) => {
       await tx.subscription.update({
         where: { id: subscription.id },
@@ -57,38 +61,20 @@ export class SubscriptionDeletedListener {
           planPriceId: freePlanPrice.id,
           stripeSubscriptionId: null,
           status: SubscriptionStatus.ACTIVE,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(
-            new Date().setMonth(new Date().getMonth() + 1),
-          ),
+          currentPeriodStart: periodStart,
+          currentPeriodEnd: periodEnd,
         },
       });
 
-      await tx.creditBalance.updateMany({
-        where: {
-          userId: subscription.userId,
-          source: CreditSource.ADDON,
-          status: CreditStatus.ACTIVE,
-        },
-        data: { status: CreditStatus.FROZEN, frozenAt: new Date() },
-      });
-
-      await tx.creditBalance.create({
-        data: {
-          userId: subscription.userId,
-          source: CreditSource.MONTHLY,
-          sourceRef: newSub.id,
-          totalCredits: freePlan.creditsIncluded,
-          remainingCredits: freePlan.creditsIncluded,
-          status: CreditStatus.ACTIVE,
-          periodStart: newSub.currentPeriodStart,
-          periodEnd: newSub.currentPeriodEnd,
-        },
-      });
+      newSubId = newSub.id;
     });
 
     this.eventEmitter.emit(SUBSCRIPTION_DELETED, {
-      subscriptionId: subscription.id,
+      userId: subscription.userId,
+      freePlanCredits: freePlan.creditsIncluded,
+      periodStart,
+      periodEnd,
+      sourceRef: newSubId,
     });
   }
 }

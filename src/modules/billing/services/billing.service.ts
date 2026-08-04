@@ -4,6 +4,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
 import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
 import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
+import { SubscriptionOperationStatus } from '../enums/subscription-operation-status.enum';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreatePlanPriceDto } from '../dto/create-plan-price.dto';
@@ -16,7 +17,7 @@ import {
   CreditSource,
   CreditStatus,
 } from '@prisma/client';
-// Magic strings should be replaced with constants or enums for better maintainability and readability.
+import { SortOrder } from '../../../common/enums/sort-order.enum';
 @Injectable()
 export class BillingService {
   constructor(
@@ -369,7 +370,10 @@ export class BillingService {
       price.stripePriceId,
     );
 
-    return { status: 'Accepted', stripeSubscriptionId: stripeSub.id };
+    return {
+      status: SubscriptionOperationStatus.ACCEPTED,
+      stripeSubscriptionId: stripeSub.id,
+    };
   }
 
   async getCurrentSubscription(userId: string) {
@@ -393,7 +397,7 @@ export class BillingService {
     return this.prisma.subscription.findMany({
       where: { userId },
       include: { plan: true, planPrice: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SortOrder.DESC },
     });
   }
   async purchaseAddon(userId: string, addonId: string) {
@@ -440,7 +444,7 @@ export class BillingService {
     );
 
     return {
-      status: 'Accepted',
+      status: SubscriptionOperationStatus.ACCEPTED,
       paymentIntentId: paymentIntent.id,
       clientSecret: paymentIntent.clientSecret,
     };
@@ -453,7 +457,7 @@ export class BillingService {
         source: CreditSource.ADDON,
         status: { in: [CreditStatus.ACTIVE, CreditStatus.FROZEN] },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SortOrder.DESC },
     });
   }
 
@@ -463,7 +467,7 @@ export class BillingService {
         userId,
         source: CreditSource.ADDON,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: SortOrder.DESC },
     });
   }
 }

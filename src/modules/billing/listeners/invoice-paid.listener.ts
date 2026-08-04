@@ -3,7 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '../../../events/payment.events';
 import type { InvoicePaidEvent } from '../../../events/payment.events';
-import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { SubscriptionStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { INVOICE_PAID } from '../../../events/event.constants';
 
@@ -65,10 +65,8 @@ export class InvoicePaidListener {
         },
       });
 
-      let subscriptionId: string;
-
       if (!activeSubscription) {
-        const newSub = await tx.subscription.create({
+        await tx.subscription.create({
           data: {
             userId: user.id,
             planId: planPrice.planId,
@@ -79,7 +77,6 @@ export class InvoicePaidListener {
             currentPeriodEnd: event.periodEnd,
           },
         });
-        subscriptionId = newSub.id;
       } else {
         if (activeSubscription.planPriceId !== planPrice.id) {
           await tx.subscription.update({
@@ -87,7 +84,7 @@ export class InvoicePaidListener {
             data: { status: SubscriptionStatus.CANCELLED },
           });
 
-          const newSub = await tx.subscription.create({
+          await tx.subscription.create({
             data: {
               userId: user.id,
               planId: planPrice.planId,
@@ -98,7 +95,6 @@ export class InvoicePaidListener {
               currentPeriodEnd: event.periodEnd,
             },
           });
-          subscriptionId = newSub.id;
         } else {
           await tx.subscription.update({
             where: { id: activeSubscription.id },
@@ -108,44 +104,19 @@ export class InvoicePaidListener {
               currentPeriodEnd: event.periodEnd,
             },
           });
-          subscriptionId = activeSubscription.id;
         }
       }
+    });
 
-      await tx.creditBalance.updateMany({
-        where: {
-          userId: user.id,
-          source: CreditSource.MONTHLY,
-          status: CreditStatus.ACTIVE,
-        },
-        data: { status: CreditStatus.EXHAUSTED },
-      });
+    const creditsIncluded = Number(planPrice.plan.creditsIncluded) || 0;
 
-      await tx.creditBalance.updateMany({
-        where: {
-          userId: user.id,
-          source: CreditSource.ADDON,
-          status: CreditStatus.FROZEN,
-        },
-        data: { status: CreditStatus.ACTIVE, unfrozenAt: new Date() },
-      });
-
-      const creditsIncluded = Number(planPrice.plan.creditsIncluded) || 0;
-
-      await tx.creditBalance.create({
-        data: {
-          userId: user.id,
-          source: CreditSource.MONTHLY,
-          sourceRef: event.providerEventId,
-          totalCredits: creditsIncluded,
-          remainingCredits: creditsIncluded,
-          status: CreditStatus.ACTIVE,
-          periodStart: event.periodStart,
-          periodEnd: event.periodEnd,
-        },
-      });
-
-      this.eventEmitter.emit(INVOICE_PAID, { subscriptionId });
+    this.eventEmitter.emit(INVOICE_PAID, {
+      userId: user.id,
+      creditsIncluded,
+      periodStart: event.periodStart,
+      periodEnd: event.periodEnd,
+      sourceRef: event.providerEventId,
+      planSlug: planPrice.plan.slug,
     });
   }
 }

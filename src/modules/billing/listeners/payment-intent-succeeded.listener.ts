@@ -3,7 +3,6 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '../../../events/payment.events';
 import type { PaymentIntentSucceededEvent } from '../../../events/payment.events';
-import { CreditSource, CreditStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ADDON_PURCHASED } from '../../../events/event.constants';
 
@@ -37,31 +36,22 @@ export class PaymentIntentSucceededListener {
       return;
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      const purchase = await tx.addonPurchase.create({
-        data: {
-          userId,
-          addonPackageId,
-          stripePaymentIntentId: event.paymentIntentId,
-        },
-      });
-
-      await tx.creditBalance.create({
-        data: {
-          userId,
-          source: CreditSource.ADDON,
-          sourceRef: purchase.id,
-          totalCredits: addonPackage.credits,
-          remainingCredits: addonPackage.credits,
-          status: CreditStatus.ACTIVE,
-          purchasedAt: new Date(),
-        },
-      });
+    const purchase = await this.prisma.addonPurchase.create({
+      data: {
+        userId,
+        addonPackageId,
+        stripePaymentIntentId: event.paymentIntentId,
+      },
     });
 
     this.logger.log(
       `Successfully processed add-on purchase for user ${userId}`,
     );
-    this.eventEmitter.emit(ADDON_PURCHASED, { userId, addonPackageId });
+
+    this.eventEmitter.emit(ADDON_PURCHASED, {
+      userId,
+      credits: addonPackage.credits,
+      sourceRef: purchase.id,
+    });
   }
 }

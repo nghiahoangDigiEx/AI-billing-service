@@ -7,6 +7,7 @@ import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provide
 import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
 import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
 import { BillingInterval } from '@prisma/client';
+import { SortOrder } from '../../../common/enums/sort-order.enum';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -585,7 +586,7 @@ describe('BillingService', () => {
       expect(prisma.subscription.findMany).toHaveBeenCalledWith({
         where: { userId: 'user_1' },
         include: { plan: true, planPrice: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SortOrder.DESC },
       });
     });
   });
@@ -655,7 +656,7 @@ describe('BillingService', () => {
           source: 'ADDON',
           status: { in: ['ACTIVE', 'FROZEN'] },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SortOrder.DESC },
       });
     });
   });
@@ -675,7 +676,7 @@ describe('BillingService', () => {
           userId: 'user_1',
           source: 'ADDON',
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SortOrder.DESC },
       });
     });
   });

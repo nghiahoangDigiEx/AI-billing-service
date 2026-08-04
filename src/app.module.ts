@@ -8,6 +8,7 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { StripeModule } from './modules/stripe/stripe.module';
+import { CreditModule } from './modules/credit/credit.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { LoggerModule } from './common/logger/logger.module';
@@ -27,6 +28,7 @@ import { LoggerModule } from './common/logger/logger.module';
     AuthModule,
     BillingModule,
     StripeModule,
+    CreditModule,
   ],
   controllers: [],
   providers: [

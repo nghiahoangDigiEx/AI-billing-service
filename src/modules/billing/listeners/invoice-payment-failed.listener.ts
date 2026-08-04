@@ -3,7 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '../../../events/payment.events';
 import type { InvoicePaymentFailedEvent } from '../../../events/payment.events';
-import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { SubscriptionStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SUBSCRIPTION_PAYMENT_FAILED } from '../../../events/event.constants';
 
@@ -53,24 +53,14 @@ export class InvoicePaymentFailedListener {
       return;
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.subscription.update({
-        where: { id: subscription.id },
-        data: { status: SubscriptionStatus.PAST_DUE },
-      });
-
-      await tx.creditBalance.updateMany({
-        where: {
-          userId: user.id,
-          source: CreditSource.ADDON,
-          status: CreditStatus.ACTIVE,
-        },
-        data: { status: CreditStatus.FROZEN, frozenAt: new Date() },
-      });
+    await this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { status: SubscriptionStatus.PAST_DUE },
     });
 
     this.eventEmitter.emit(SUBSCRIPTION_PAYMENT_FAILED, {
-      subscriptionId: subscription.id,
+      userId: user.id,
+      sourceRef: event.providerEventId,
     });
   }
 }
