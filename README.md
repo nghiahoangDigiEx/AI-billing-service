@@ -23,13 +23,43 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Billing Service API managing user authentication, subscriptions, and credit-based consumption.
 
-## Project setup
+## Setup Instructions
 
-```bash
-$ npm install
-```
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Environment Variables:**
+   Copy `.env.example` to `.env` and fill in the required values:
+   ```env
+   DATABASE_URL="postgres://user:pass@host:port/db"
+   JWT_SECRET="your-super-secret-jwt-key"
+   JWT_EXPIRES_IN="15m"
+   JWT_REFRESH_SECRET="your-super-secret-refresh-key"
+   JWT_REFRESH_EXPIRES_IN="7d"
+   GOOGLE_CLIENT_ID="google-client-id"
+   GOOGLE_CLIENT_SECRET="google-client-secret"
+   GOOGLE_CALLBACK_URL="http://localhost:3000/auth/google/callback"
+   PORT=3000
+   ```
+
+3. **Database Setup:**
+   Initialize the database and seed the default admin user (`admin@example.com` / `admin123`).
+   ```bash
+   npx prisma migrate dev
+   npm run seed
+   ```
+
+## API Documentation
+
+Swagger API documentation is automatically generated and accessible at `/api` when the server is running.
+The authentication flow supports:
+- Traditional Email/Password registration (`/auth/register`) and login (`/auth/login`).
+- Google OAuth2.0 authentication (`/auth/google`).
+- JWT-based protected endpoints with Refresh Token rotation (`/auth/refresh`).
 
 ## Compile and run the project
 

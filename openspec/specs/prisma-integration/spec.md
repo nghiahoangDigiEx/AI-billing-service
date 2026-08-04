@@ -1,7 +1,12 @@
-## ADDED Requirements
+# prisma-integration
+
+## Purpose
+TBD
+
+## Requirements
 
 ### Requirement: Prisma ORM Integration
-The system SHALL integrate Prisma ORM as the database layer for PostgreSQL (Neon). PrismaClient SHALL be wrapped in a PrismaService that implements OnModuleInit for automatic connection establishment.
+The system SHALL integrate Prisma ORM as the database layer for PostgreSQL (Neon). PrismaClient SHALL be wrapped in a PrismaService that implements OnModuleInit for automatic connection establishment. Furthermore, business logic MUST NOT use raw string literals (e.g. `'ACTIVE'`, `'INACTIVE'`) to represent database ENUM types; instead, the generated enum objects exported by `@prisma/client` (e.g. `PlanStatus.ACTIVE`) SHALL be explicitly used to ensure compile-time safety and refactoring resilience.
 
 #### Scenario: Application starts with database connection
 - **WHEN** the application starts
@@ -12,6 +17,10 @@ The system SHALL integrate Prisma ORM as the database layer for PostgreSQL (Neon
 - **WHEN** `npx prisma generate` is executed
 - **THEN** Prisma client files are generated in node_modules/@prisma/client
 - **AND** the client is available for import throughout the application
+
+#### Scenario: Service queries use generated Enums
+- **WHEN** business logic issues a query filtering by an enum state
+- **THEN** it explicitly uses the `@prisma/client` enum value rather than a string literal
 
 ### Requirement: Global PrismaModule
 The system SHALL provide a PrismaModule that is globally available across all feature modules. The module SHALL export PrismaService with global: true flag.

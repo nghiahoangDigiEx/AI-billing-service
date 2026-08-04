@@ -125,6 +125,7 @@ Event-driven via EventEmitter2. Modules never call each other's services directl
 ## Design Principles
 
 - Keep controllers thin — controllers handle HTTP concerns only (parsing, guards, response formatting)
+- All API responses must follow a single standard envelope based on ApiResponse<T> — use success, data, message, error, and details consistently, and avoid returning raw objects or inconsistent error shapes
 - Business logic belongs in services — services contain all domain logic and orchestration
 - External systems must be accessed through adapters — Stripe via PaymentProviderAdapter, never direct SDK calls in business logic
 - Prefer composition over inheritance — use dependency injection and interfaces
