@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PaymentEvents } from '../../../events/payment.events';
-import type { PaymentIntentSucceededEvent } from '../../../events/payment.events';
+import { PaymentEvents } from '@/events/payment.events';
+import type { PaymentIntentSucceededEvent } from '@/events/payment.events';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ADDON_PURCHASED } from '../../../events/event.constants';
+import { ADDON_PURCHASED } from '@/events/event.constants';
 
 @Injectable()
 export class PaymentIntentSucceededListener {

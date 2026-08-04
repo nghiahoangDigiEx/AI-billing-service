@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
-import { CONFIG_KEYS } from '../../../common/constants/config.constants';
-import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
-import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
+import { CONFIG_KEYS } from '@/common/constants/config.constants';
+import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
+import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
 
 @Injectable()
 export class StripeAdapter implements PaymentProviderAdapter {

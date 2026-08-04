@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserService } from './user.service';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { UserService } from '@/modules/user/services/user.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AppException } from '../../../common/exceptions';
+import { AppException } from '@/common/exceptions';
 import { Role } from '@prisma/client';
-import { USER_REGISTERED } from '../../../events/event.constants';
+import { USER_REGISTERED } from '@/events/event.constants';
 
 describe('UserService', () => {
   const mockPrismaService = {

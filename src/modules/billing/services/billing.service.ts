@@ -1,23 +1,23 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { AppException } from '../../../common/exceptions';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
-import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
-import { SubscriptionOperationStatus } from '../enums/subscription-operation-status.enum';
-import { CreatePlanDto } from '../dto/create-plan.dto';
-import { UpdatePlanDto } from '../dto/update-plan.dto';
-import { CreatePlanPriceDto } from '../dto/create-plan-price.dto';
-import { CreateAddonPackageDto } from '../dto/create-addon-package.dto';
-import { UpdateAddonPackageDto } from '../dto/update-addon-package.dto';
-import { ErrorCode } from '../../../common/enums/error-code.enum';
+import { AppException } from '@/common/exceptions';
+import { PrismaService } from '@/prisma/prisma.service';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
+import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
+import { SubscriptionOperationStatus } from '@/modules/billing/enums/subscription-operation-status.enum';
+import { CreatePlanDto } from '@/modules/billing/dto/create-plan.dto';
+import { UpdatePlanDto } from '@/modules/billing/dto/update-plan.dto';
+import { CreatePlanPriceDto } from '@/modules/billing/dto/create-plan-price.dto';
+import { CreateAddonPackageDto } from '@/modules/billing/dto/create-addon-package.dto';
+import { UpdateAddonPackageDto } from '@/modules/billing/dto/update-addon-package.dto';
+import { ErrorCode } from '@/common/enums/error-code.enum';
 import {
   PlanStatus,
   SubscriptionStatus,
   CreditSource,
   CreditStatus,
 } from '@prisma/client';
-import { SortOrder } from '../../../common/enums/sort-order.enum';
+import { SortOrder } from '@/common/enums/sort-order.enum';
 @Injectable()
 export class BillingService {
   constructor(

@@ -9,16 +9,16 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
+import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
-import { AuthService } from '../services/auth.service';
-import { RegisterDto } from '../dto/register.dto';
-import { LoginDto } from '../dto/login.dto';
-import { RefreshDto } from '../dto/refresh.dto';
-import { Public } from '../decorators/public.decorator';
-import { AuthResponseDto } from '../dto/auth-response.dto';
-import { UserResponseDto } from '../../user/dto/user-response.dto';
+import { AuthService } from '@/modules/auth/services/auth.service';
+import { RegisterDto } from '@/modules/auth/dto/register.dto';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { RefreshDto } from '@/modules/auth/dto/refresh.dto';
+import { Public } from '@/modules/auth/decorators/public.decorator';
+import { AuthResponseDto } from '@/modules/auth/dto/auth-response.dto';
+import { UserResponseDto } from '@/modules/user/dto/user-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')

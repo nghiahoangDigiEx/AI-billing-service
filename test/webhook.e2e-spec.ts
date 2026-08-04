@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { StripeWebhookStrategy } from '../src/modules/stripe/strategies/stripe-webhook.strategy';
-import { ParsedWebhookEvent } from '../src/modules/payment/interfaces/webhook-strategy.interface';
+import { AppModule } from '@/app.module';
+import { PrismaService } from '@/prisma/prisma.service';
+import { StripeWebhookStrategy } from '@/modules/stripe/strategies/stripe-webhook.strategy';
+import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
 
 jest.setTimeout(30000);
 

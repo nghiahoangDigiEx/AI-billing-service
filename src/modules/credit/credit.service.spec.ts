@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CreditService } from './credit.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { CreditService } from '@/modules/credit/credit.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import {
   CreditSource,
   CreditStatus,
   CreditTransactionType,
 } from '@prisma/client';
-import { SortOrder } from '../../common/enums/sort-order.enum';
+import { SortOrder } from '@/common/enums/sort-order.enum';
 
 describe('CreditService', () => {
   let service: CreditService;

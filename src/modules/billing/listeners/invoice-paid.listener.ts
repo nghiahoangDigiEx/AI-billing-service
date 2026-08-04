@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PaymentEvents } from '../../../events/payment.events';
-import type { InvoicePaidEvent } from '../../../events/payment.events';
+import { PaymentEvents } from '@/events/payment.events';
+import type { InvoicePaidEvent } from '@/events/payment.events';
 import { SubscriptionStatus } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { INVOICE_PAID } from '../../../events/event.constants';
+import { INVOICE_PAID } from '@/events/event.constants';
 
 @Injectable()
 export class InvoicePaidListener {

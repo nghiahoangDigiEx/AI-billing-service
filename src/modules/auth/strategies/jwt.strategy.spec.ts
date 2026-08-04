@@ -1,4 +1,4 @@
-import { JwtStrategy } from './jwt.strategy';
+import { JwtStrategy } from '@/modules/auth/strategies/jwt.strategy';
 import { ConfigService } from '@nestjs/config';
 
 describe('JwtStrategy', () => {

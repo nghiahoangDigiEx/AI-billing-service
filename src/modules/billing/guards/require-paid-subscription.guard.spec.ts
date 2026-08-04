@@ -1,9 +1,9 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RequirePaidSubscriptionGuard } from './require-paid-subscription.guard';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { RequirePaidSubscriptionGuard } from '@/modules/billing/guards/require-paid-subscription.guard';
+import { PrismaService } from '@/prisma/prisma.service';
 import { SubscriptionStatus } from '@prisma/client';
-import { PLAN_SLUGS } from '../constants/billing.constants';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 describe('RequirePaidSubscriptionGuard', () => {
   let guard: RequirePaidSubscriptionGuard;

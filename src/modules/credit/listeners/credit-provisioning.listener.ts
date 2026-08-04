@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { CreditService } from '../credit.service';
+import { CreditService } from '@/modules/credit/credit.service';
 import {
   INVOICE_PAID,
   ADDON_PURCHASED,
   SUBSCRIPTION_PAYMENT_FAILED,
   SUBSCRIPTION_DELETED,
-} from '../../../events/event.constants';
+} from '@/events/event.constants';
 
 export interface InvoicePaidPayload {
   userId: string;

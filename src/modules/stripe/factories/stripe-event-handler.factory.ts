@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { StripeEventHandler } from '../interfaces/stripe-event-handler.interface';
+import { StripeEventHandler } from '@/modules/stripe/interfaces/stripe-event-handler.interface';
 
 @Injectable()
 export class StripeEventHandlerFactory {

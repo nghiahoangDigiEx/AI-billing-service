@@ -1,9 +1,9 @@
 import { Controller, Post, Req, Res, HttpStatus } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { StripeWebhookService } from '../services/stripe-webhook.service';
-import { WebhookStrategyFactory } from '../../payment/factories/webhook-strategy.factory';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
-import { Public } from '../../auth/decorators/public.decorator';
+import { StripeWebhookService } from '@/modules/stripe/services/stripe-webhook.service';
+import { WebhookStrategyFactory } from '@/modules/payment/factories/webhook-strategy.factory';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
+import { Public } from '@/modules/auth/decorators/public.decorator';
 
 @Public()
 @Controller('webhooks/stripe')

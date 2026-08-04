@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AuthService } from './auth.service';
+import { AuthService } from '@/modules/auth/services/auth.service';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { UserService } from '../../user/services/user.service';
-import { AppException } from '../../../common/exceptions';
+import { PrismaService } from '@/prisma/prisma.service';
+import { UserService } from '@/modules/user/services/user.service';
+import { AppException } from '@/common/exceptions';
 import * as bcrypt from 'bcrypt';
 import { Provider } from '@prisma/client';
 

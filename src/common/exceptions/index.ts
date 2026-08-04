@@ -1,1 +1,1 @@
-export * from './app.exception';
+export * from '@/common/exceptions/app.exception';

@@ -1,1 +1,1 @@
-export * from './api-response.interface';
+export * from '@/common/interfaces/api-response.interface';

@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import {
   CreditSource,
   CreditStatus,
   CreditTransactionType,
 } from '@prisma/client';
-import { PLAN_SLUGS } from '../billing/constants/billing.constants';
-import { SortOrder } from '../../common/enums/sort-order.enum';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
+import { SortOrder } from '@/common/enums/sort-order.enum';
 
 @Injectable()
 export class CreditService {

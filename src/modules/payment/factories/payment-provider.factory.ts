@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { PaymentProviderAdapter } from '../interfaces/payment-provider-adapter.interface';
-import { PaymentProvider } from '../enums/payment-provider.enum';
+import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 
 @Injectable()
 export class PaymentProviderFactory {

@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppException } from '../../../common/exceptions';
-import { BillingService } from './billing.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
-import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
-import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
+import { AppException } from '@/common/exceptions';
+import { BillingService } from '@/modules/billing/services/billing.service';
+import { PrismaService } from '@/prisma/prisma.service';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
+import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
 import { BillingInterval } from '@prisma/client';
-import { SortOrder } from '../../../common/enums/sort-order.enum';
+import { SortOrder } from '@/common/enums/sort-order.enum';
 
 describe('BillingService', () => {
   let service: BillingService;

@@ -1,14 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
+import { PrismaService } from '@/prisma/prisma.service';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { USER_REGISTERED_SUCCESS } from '../../../events/event.constants';
-import { CONFIG_KEYS } from '../../../common/constants/config.constants';
+import { USER_REGISTERED_SUCCESS } from '@/events/event.constants';
+import { CONFIG_KEYS } from '@/common/constants/config.constants';
 import { CreditSource, CreditStatus, SubscriptionStatus } from '@prisma/client';
-import { PLAN_SLUGS } from '../constants/billing.constants';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 @Injectable()
 export class BillingScheduler {
