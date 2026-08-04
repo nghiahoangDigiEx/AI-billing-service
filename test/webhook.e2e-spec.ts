@@ -2,16 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import Stripe from 'stripe';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { StripeService } from '../src/modules/billing/services/stripe.service';
+import { StripeWebhookStrategy } from '../src/modules/stripe/strategies/stripe-webhook.strategy';
+import { ParsedWebhookEvent } from '../src/modules/payment/interfaces/webhook-strategy.interface';
 
 jest.setTimeout(30000);
 
 describe('WebhookController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
-  let stripeService: StripeService;
+  let stripeWebhookStrategy: StripeWebhookStrategy;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -23,7 +23,9 @@ describe('WebhookController (e2e)', () => {
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
-    stripeService = app.get<StripeService>(StripeService);
+    stripeWebhookStrategy = app.get<StripeWebhookStrategy>(
+      StripeWebhookStrategy,
+    );
 
     // Clean up DB before test
     await prisma.webhookEvent.deleteMany();
@@ -66,10 +68,10 @@ describe('WebhookController (e2e)', () => {
         data: { object: {} },
       };
 
-      // Mock verifyWebhookSignature
+      // Mock parseEvent
       jest
-        .spyOn(stripeService, 'verifyWebhookSignature')
-        .mockReturnValue(mockEvent as unknown as Stripe.Event);
+        .spyOn(stripeWebhookStrategy, 'parseEvent')
+        .mockReturnValue(mockEvent as unknown as ParsedWebhookEvent);
 
       // First request (should process)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -102,11 +104,9 @@ describe('WebhookController (e2e)', () => {
     });
 
     it('should handle verification errors', async () => {
-      jest
-        .spyOn(stripeService, 'verifyWebhookSignature')
-        .mockImplementation(() => {
-          throw new Error('Invalid signature');
-        });
+      jest.spyOn(stripeWebhookStrategy, 'parseEvent').mockImplementation(() => {
+        throw new Error('Invalid signature');
+      });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       return request(app.getHttpServer())

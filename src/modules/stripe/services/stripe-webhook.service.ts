@@ -1,21 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma, WebhookEventStatus } from '@prisma/client';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import Stripe from 'stripe';
-import { WebhookStrategyFactory } from '../strategies/webhook-strategy.factory';
+import { ParsedWebhookEvent } from '../../payment/interfaces/webhook-strategy.interface';
+import { StripeEventHandlerFactory } from '../factories/stripe-event-handler.factory';
 
 @Injectable()
-export class WebhookService {
-  private readonly logger = new Logger(WebhookService.name);
+export class StripeWebhookService {
+  private readonly logger = new Logger(StripeWebhookService.name);
 
   constructor(
     private prisma: PrismaService,
-    private eventEmitter: EventEmitter2,
-    private strategyFactory: WebhookStrategyFactory,
+    private readonly stripeEventHandlerFactory: StripeEventHandlerFactory,
   ) {}
 
-  async claimEvent(event: Stripe.Event): Promise<boolean> {
+  async claimEvent(event: ParsedWebhookEvent): Promise<boolean> {
     const existingEvent = await this.prisma.webhookEvent.findUnique({
       where: { stripeEventId: event.id },
     });
@@ -72,31 +70,28 @@ export class WebhookService {
     });
   }
 
-  async handleEvent(event: Stripe.Event): Promise<void> {
+  async handleEvent(event: ParsedWebhookEvent): Promise<void> {
     const claimed = await this.claimEvent(event);
 
     if (!claimed) {
       return;
     }
 
-    const strategy = this.strategyFactory.getStrategy(event.type);
-
     try {
-      if (strategy) {
-        await strategy.handle(event);
-        await this.markProcessed(event.id, WebhookEventStatus.PROCESSED);
-      } else {
+      const handler = this.stripeEventHandlerFactory.getHandler(event.type);
+      if (!handler) {
         this.logger.log(`Unhandled event type: ${event.type}`);
-        await this.markProcessed(
-          event.id,
-          WebhookEventStatus.UNHANDLED as WebhookEventStatus,
-        );
+        await this.markProcessed(event.id, WebhookEventStatus.UNHANDLED);
+        return;
       }
+
+      await handler.handle(event);
+
+      await this.markProcessed(event.id, WebhookEventStatus.PROCESSED);
     } catch (error) {
       const err = error as Error;
       await this.markFailed(event.id, err.message || String(err));
 
-      // Prisma's unique constraint violation is 'P2002'
       const isUniqueViolation = (e: unknown) =>
         typeof e === 'object' &&
         e !== null &&

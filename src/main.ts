@@ -12,6 +12,8 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  app.setGlobalPrefix('api');
+
   app.useLogger(app.get(AppLoggerService));
 
   app.useGlobalPipes(

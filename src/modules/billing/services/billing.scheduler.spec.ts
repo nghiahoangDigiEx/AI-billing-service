@@ -1,14 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BillingScheduler } from './billing.scheduler';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StripeService } from './stripe.service';
+import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
+import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('BillingScheduler', () => {
   let scheduler: BillingScheduler;
   let prisma: jest.Mocked<PrismaService>;
-  let stripeService: jest.Mocked<StripeService>;
+  let paymentProviderFactory: PaymentProviderFactory;
+  let paymentAdapter: jest.Mocked<PaymentProviderAdapter>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(async () => {
@@ -34,8 +37,12 @@ describe('BillingScheduler', () => {
         ),
     };
 
-    const mockStripeService = {
+    const mockPaymentAdapter = {
       createCustomer: jest.fn(),
+    };
+
+    const mockPaymentProviderFactory = {
+      getAdapter: jest.fn().mockReturnValue(mockPaymentAdapter),
     };
 
     const mockConfigService = {
@@ -50,7 +57,10 @@ describe('BillingScheduler', () => {
       providers: [
         BillingScheduler,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: StripeService, useValue: mockStripeService },
+        {
+          provide: PaymentProviderFactory,
+          useValue: mockPaymentProviderFactory,
+        },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
@@ -58,7 +68,10 @@ describe('BillingScheduler', () => {
 
     scheduler = module.get<BillingScheduler>(BillingScheduler);
     prisma = module.get(PrismaService);
-    stripeService = module.get(StripeService);
+    paymentProviderFactory = module.get(PaymentProviderFactory);
+    paymentAdapter = paymentProviderFactory.getAdapter(
+      PaymentProvider.STRIPE,
+    ) as jest.Mocked<PaymentProviderAdapter>;
     eventEmitter = module.get(EventEmitter2);
   });
 
@@ -88,7 +101,7 @@ describe('BillingScheduler', () => {
 
       await scheduler.processPendingStripeSetup();
 
-      expect(stripeService.createCustomer).not.toHaveBeenCalled();
+      expect(paymentAdapter.createCustomer).not.toHaveBeenCalled();
     });
 
     it('should skip if next retry time not reached', async () => {
@@ -107,7 +120,7 @@ describe('BillingScheduler', () => {
 
       await scheduler.processPendingStripeSetup();
 
-      expect(stripeService.createCustomer).not.toHaveBeenCalled();
+      expect(paymentAdapter.createCustomer).not.toHaveBeenCalled();
     });
 
     it('should process pending setup successfully', async () => {
@@ -124,10 +137,11 @@ describe('BillingScheduler', () => {
       (prisma.user.findMany as jest.Mock).mockResolvedValue([mockUser]);
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue({
         id: 'free',
+        creditsIncluded: 100,
         prices: [{ id: 'price_1' }],
       });
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (stripeService.createCustomer as jest.Mock).mockResolvedValue({
+      (paymentAdapter.createCustomer as jest.Mock).mockResolvedValue({
         id: 'cus_1',
       });
       (prisma.subscription.create as jest.Mock).mockResolvedValue({
@@ -138,7 +152,7 @@ describe('BillingScheduler', () => {
 
       await scheduler.processPendingStripeSetup();
 
-      expect(stripeService.createCustomer).toHaveBeenCalledWith(
+      expect(paymentAdapter.createCustomer).toHaveBeenCalledWith(
         'test@test.com',
         'Test',
       );
@@ -169,7 +183,7 @@ describe('BillingScheduler', () => {
         prices: [{ id: 'price_1' }],
       });
 
-      stripeService.createCustomer.mockRejectedValue(
+      paymentAdapter.createCustomer.mockRejectedValue(
         new Error('Stripe API error'),
       );
 

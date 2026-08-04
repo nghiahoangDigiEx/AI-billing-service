@@ -7,6 +7,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { StripeModule } from './modules/stripe/stripe.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { LoggerModule } from './common/logger/logger.module';
@@ -25,6 +26,7 @@ import { LoggerModule } from './common/logger/logger.module';
     UserModule,
     AuthModule,
     BillingModule,
+    StripeModule,
   ],
   controllers: [],
   providers: [

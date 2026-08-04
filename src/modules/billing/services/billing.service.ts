@@ -1,7 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { AppException } from '../../../common/exceptions';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StripeService } from './stripe.service';
+import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
+import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
+import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { UpdatePlanDto } from '../dto/update-plan.dto';
 import { CreatePlanPriceDto } from '../dto/create-plan-price.dto';
@@ -14,13 +16,17 @@ import {
   CreditSource,
   CreditStatus,
 } from '@prisma/client';
-
+// Magic strings should be replaced with constants or enums for better maintainability and readability.
 @Injectable()
 export class BillingService {
   constructor(
     private prisma: PrismaService,
-    private stripeService: StripeService,
+    private paymentProviderFactory: PaymentProviderFactory,
   ) {}
+
+  private getPaymentAdapter() {
+    return this.paymentProviderFactory.getAdapter(PaymentProvider.STRIPE);
+  }
 
   async createPlan(createPlanDto: CreatePlanDto) {
     const { name, slug, creditsIncluded, billingInterval, amount, currency } =
@@ -38,13 +44,13 @@ export class BillingService {
       );
     }
 
-    const stripeProduct = await this.stripeService.createProduct(name);
+    const stripeProduct = await this.getPaymentAdapter().createProduct(name);
 
-    const stripePrice = await this.stripeService.createPrice(
+    const stripePrice = await this.getPaymentAdapter().createPrice(
       stripeProduct.id,
       amount,
       currency,
-      billingInterval.toLowerCase() as 'month' | 'year',
+      billingInterval.toLowerCase() as SubscriptionInterval,
     );
 
     const plan = await this.prisma.plan.create({
@@ -114,7 +120,7 @@ export class BillingService {
     }
 
     if (updatePlanDto.name) {
-      await this.stripeService.updateProduct(
+      await this.getPaymentAdapter().updateProduct(
         plan.stripeProductId,
         updatePlanDto.name,
       );
@@ -160,11 +166,11 @@ export class BillingService {
       );
     }
 
-    const stripePrice = await this.stripeService.createPrice(
+    const stripePrice = await this.getPaymentAdapter().createPrice(
       plan.stripeProductId,
       createPlanPriceDto.amount,
       createPlanPriceDto.currency,
-      createPlanPriceDto.billingInterval.toLowerCase() as 'month' | 'year',
+      createPlanPriceDto.billingInterval.toLowerCase() as SubscriptionInterval,
     );
 
     const price = await this.prisma.planPrice.create({
@@ -234,13 +240,12 @@ export class BillingService {
   async createAddonPackage(createAddonPackageDto: CreateAddonPackageDto) {
     const { name, credits, amount, currency } = createAddonPackageDto;
 
-    const stripeProduct = await this.stripeService.createProduct(name);
+    const stripeProduct = await this.getPaymentAdapter().createProduct(name);
 
-    const stripePrice = await this.stripeService.createPrice(
+    const stripePrice = await this.getPaymentAdapter().createPrice(
       stripeProduct.id,
       amount,
       currency,
-      'month' as const,
     );
 
     const addonPackage = await this.prisma.addonPackage.create({
@@ -296,7 +301,7 @@ export class BillingService {
     }
 
     if (updateAddonPackageDto.name) {
-      await this.stripeService.updateProduct(
+      await this.getPaymentAdapter().updateProduct(
         addonPackage.stripeProductId,
         updateAddonPackageDto.name,
       );
@@ -323,7 +328,7 @@ export class BillingService {
       );
     }
 
-    await this.stripeService.archiveProduct(addonPackage.stripeProductId);
+    await this.getPaymentAdapter().archiveProduct(addonPackage.stripeProductId);
 
     const updatedAddonPackage = await this.prisma.addonPackage.update({
       where: { id },
@@ -359,7 +364,7 @@ export class BillingService {
       );
     }
 
-    const stripeSub = await this.stripeService.createSubscription(
+    const stripeSub = await this.getPaymentAdapter().createSubscription(
       user.stripeCustomerId,
       price.stripePriceId,
     );
@@ -424,7 +429,7 @@ export class BillingService {
       );
     }
 
-    const paymentIntent = await this.stripeService.createPaymentIntent(
+    const paymentIntent = await this.getPaymentAdapter().createPaymentIntent(
       addon.amount,
       addon.currency,
       user.stripeCustomerId,
@@ -437,7 +442,7 @@ export class BillingService {
     return {
       status: 'Accepted',
       paymentIntentId: paymentIntent.id,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: paymentIntent.clientSecret,
     };
   }
 

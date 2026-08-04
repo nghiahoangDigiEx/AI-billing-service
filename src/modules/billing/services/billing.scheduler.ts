@@ -1,12 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StripeService } from './stripe.service';
+import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
+import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { USER_REGISTERED_SUCCESS } from '../../../events/event.constants';
 import { CONFIG_KEYS } from '../../../common/constants/config.constants';
 import { CreditSource, CreditStatus, SubscriptionStatus } from '@prisma/client';
+import { PLAN_SLUGS } from '../constants/billing.constants';
 
 @Injectable()
 export class BillingScheduler {
@@ -14,7 +16,7 @@ export class BillingScheduler {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly stripeService: StripeService,
+    private readonly paymentProviderFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -40,7 +42,7 @@ export class BillingScheduler {
 
     // Fetch free plan
     const freePlan = await this.prisma.plan.findUnique({
-      where: { slug: 'free' },
+      where: { slug: PLAN_SLUGS.FREE },
       include: { prices: true },
     });
 
@@ -53,8 +55,6 @@ export class BillingScheduler {
     const freePlanPrice = freePlan.prices[0];
 
     for (const user of users) {
-      // Exponential backoff logic based on retryCount
-      // Backoff times: 0 -> immediate, 1 -> 5m, 2 -> 25m, 3 -> 125m, 4 -> 625m
       const backoffMinutes =
         user.retryCount === 0 ? 0 : Math.pow(5, user.retryCount - 1) * 5;
       const nextRetryTime = new Date(
@@ -77,7 +77,10 @@ export class BillingScheduler {
 
         // 1. Create Stripe Customer if missing
         if (!stripeCustomerId) {
-          const customer = await this.stripeService.createCustomer(
+          const adapter = this.paymentProviderFactory.getAdapter(
+            PaymentProvider.STRIPE,
+          );
+          const customer = await adapter.createCustomer(
             user.email,
             user.name || '',
           );
@@ -86,13 +89,11 @@ export class BillingScheduler {
 
         // 2. Create Free Subscription
         await this.prisma.$transaction(async (tx) => {
-          // Verify user hasn't setup Stripe in another process
           const currentUser = await tx.user.findUnique({
             where: { id: user.id },
           });
           if (!currentUser?.pendingStripeSetup) return;
 
-          // Create free subscription in DB
           const newSub = await tx.subscription.create({
             data: {
               userId: user.id,
@@ -112,8 +113,8 @@ export class BillingScheduler {
               userId: user.id,
               source: CreditSource.MONTHLY,
               sourceRef: newSub.id,
-              totalCredits: 100, // Hardcoded fallback based on webhook logic
-              remainingCredits: 100,
+              totalCredits: freePlan.creditsIncluded,
+              remainingCredits: freePlan.creditsIncluded,
               status: CreditStatus.ACTIVE,
               periodStart: newSub.currentPeriodStart,
               periodEnd: newSub.currentPeriodEnd,

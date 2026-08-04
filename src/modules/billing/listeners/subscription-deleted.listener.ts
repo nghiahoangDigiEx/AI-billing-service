@@ -1,37 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import Stripe from 'stripe';
-import { WebhookStrategy } from './webhook-strategy.interface';
-import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
+import { OnEvent } from '@nestjs/event-emitter';
+import { PaymentEvents } from '../../../events/payment.events';
+import type { SubscriptionDeletedEvent } from '../../../events/payment.events';
 import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
 
 @Injectable()
-export class SubscriptionDeletedStrategy implements WebhookStrategy {
-  private readonly logger = new Logger(SubscriptionDeletedStrategy.name);
+export class SubscriptionDeletedListener {
+  private readonly logger = new Logger(SubscriptionDeletedListener.name);
 
   constructor(
     private prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  canHandle(eventType: string): boolean {
-    return eventType === 'customer.subscription.deleted';
-  }
-
-  async handle(event: Stripe.Event): Promise<void> {
-    const stripeSub = event.data.object as Stripe.Subscription;
-
+  @OnEvent(PaymentEvents.SUBSCRIPTION_DELETED)
+  async handle(event: SubscriptionDeletedEvent): Promise<void> {
     const subscription = await this.prisma.subscription.findFirst({
       where: {
-        stripeSubscriptionId: stripeSub.id,
+        stripeSubscriptionId: event.subscriptionId,
         status: SubscriptionStatus.ACTIVE,
       },
     });
 
     if (!subscription) {
       this.logger.warn(
-        `Subscription ${stripeSub.id} not found for customer.subscription.deleted`,
+        `Subscription ${event.subscriptionId} not found for subscription.deleted`,
       );
       return;
     }
@@ -40,6 +36,7 @@ export class SubscriptionDeletedStrategy implements WebhookStrategy {
       where: { slug: 'free' },
       include: { prices: true },
     });
+
     if (!freePlan || freePlan.prices.length === 0) {
       throw new Error('Free plan not found');
     }
@@ -58,16 +55,15 @@ export class SubscriptionDeletedStrategy implements WebhookStrategy {
           userId: subscription.userId,
           planId: freePlan.id,
           planPriceId: freePlanPrice.id,
-          stripeSubscriptionId: null, // Local free subscription has no Stripe ID
+          stripeSubscriptionId: null,
           status: SubscriptionStatus.ACTIVE,
           currentPeriodStart: new Date(),
           currentPeriodEnd: new Date(
             new Date().setMonth(new Date().getMonth() + 1),
-          ), // 1 month
+          ),
         },
       });
 
-      // Freeze active add-on credits
       await tx.creditBalance.updateMany({
         where: {
           userId: subscription.userId,
@@ -77,7 +73,6 @@ export class SubscriptionDeletedStrategy implements WebhookStrategy {
         data: { status: CreditStatus.FROZEN, frozenAt: new Date() },
       });
 
-      // Create MONTHLY for Free
       await tx.creditBalance.create({
         data: {
           userId: subscription.userId,

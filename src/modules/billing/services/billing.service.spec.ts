@@ -2,13 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppException } from '../../../common/exceptions';
 import { BillingService } from './billing.service';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { StripeService } from './stripe.service';
+import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
+import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
+import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
 import { BillingInterval } from '@prisma/client';
 
 describe('BillingService', () => {
   let service: BillingService;
   let prisma: PrismaService;
-  let stripeService: StripeService;
+  let paymentProviderFactory: PaymentProviderFactory;
+  let paymentAdapter: PaymentProviderAdapter;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -49,14 +53,16 @@ describe('BillingService', () => {
           },
         },
         {
-          provide: StripeService,
+          provide: PaymentProviderFactory,
           useValue: {
-            createProduct: jest.fn(),
-            updateProduct: jest.fn(),
-            createPrice: jest.fn(),
-            archiveProduct: jest.fn(),
-            createSubscription: jest.fn(),
-            createPaymentIntent: jest.fn(),
+            getAdapter: jest.fn().mockReturnValue({
+              createProduct: jest.fn(),
+              updateProduct: jest.fn(),
+              createPrice: jest.fn(),
+              archiveProduct: jest.fn(),
+              createSubscription: jest.fn(),
+              createPaymentIntent: jest.fn(),
+            }),
           },
         },
       ],
@@ -64,7 +70,10 @@ describe('BillingService', () => {
 
     service = module.get<BillingService>(BillingService);
     prisma = module.get<PrismaService>(PrismaService);
-    stripeService = module.get<StripeService>(StripeService);
+    paymentProviderFactory = module.get<PaymentProviderFactory>(
+      PaymentProviderFactory,
+    );
+    paymentAdapter = paymentProviderFactory.getAdapter(PaymentProvider.STRIPE);
   });
 
   describe('createPlan', () => {
@@ -90,10 +99,10 @@ describe('BillingService', () => {
       };
 
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
-      (stripeService.createProduct as jest.Mock).mockResolvedValue(
+      (paymentAdapter.createProduct as jest.Mock).mockResolvedValue(
         mockStripeProduct,
       );
-      (stripeService.createPrice as jest.Mock).mockResolvedValue(
+      (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(
         mockStripePrice,
       );
       (prisma.plan.create as jest.Mock).mockResolvedValue(mockPlan);
@@ -104,12 +113,12 @@ describe('BillingService', () => {
       expect(prisma.plan.findUnique).toHaveBeenCalledWith({
         where: { slug: 'pro' },
       });
-      expect(stripeService.createProduct).toHaveBeenCalledWith('Pro Plan');
-      expect(stripeService.createPrice).toHaveBeenCalledWith(
+      expect(paymentAdapter.createProduct).toHaveBeenCalledWith('Pro Plan');
+      expect(paymentAdapter.createPrice).toHaveBeenCalledWith(
         'prod_123',
         1000,
         'usd',
-        'month',
+        SubscriptionInterval.MONTH,
       );
       expect(prisma.plan.create).toHaveBeenCalled();
     });
@@ -205,13 +214,13 @@ describe('BillingService', () => {
       };
 
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (stripeService.updateProduct as jest.Mock).mockResolvedValue({});
+      (paymentAdapter.updateProduct as jest.Mock).mockResolvedValue({});
       (prisma.plan.update as jest.Mock).mockResolvedValue(updatedPlan);
 
       const result = await service.updatePlan('plan_123', { name: 'New Name' });
 
       expect(result).toEqual(updatedPlan);
-      expect(stripeService.updateProduct).toHaveBeenCalledWith(
+      expect(paymentAdapter.updateProduct).toHaveBeenCalledWith(
         'prod_123',
         'New Name',
       );
@@ -249,7 +258,7 @@ describe('BillingService', () => {
 
       (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
       (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(null);
-      (stripeService.createPrice as jest.Mock).mockResolvedValue(
+      (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(
         mockStripePrice,
       );
       (prisma.planPrice.create as jest.Mock).mockResolvedValue(mockPrice);
@@ -272,11 +281,11 @@ describe('BillingService', () => {
           status: 'ACTIVE',
         },
       });
-      expect(stripeService.createPrice).toHaveBeenCalledWith(
+      expect(paymentAdapter.createPrice).toHaveBeenCalledWith(
         'prod_123',
         10000,
         'usd',
-        'year',
+        SubscriptionInterval.YEAR,
       );
       expect(prisma.planPrice.create).toHaveBeenCalled();
     });
@@ -393,19 +402,20 @@ describe('BillingService', () => {
       const mockPrice = { id: 'price_addon' };
       const mockAddon = { id: 'addon_1', ...dto };
 
-      (stripeService.createProduct as jest.Mock).mockResolvedValue(mockProduct);
-      (stripeService.createPrice as jest.Mock).mockResolvedValue(mockPrice);
+      (paymentAdapter.createProduct as jest.Mock).mockResolvedValue(
+        mockProduct,
+      );
+      (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(mockPrice);
       (prisma.addonPackage.create as jest.Mock).mockResolvedValue(mockAddon);
 
       const result = await service.createAddonPackage(dto);
 
       expect(result).toEqual(mockAddon);
-      expect(stripeService.createProduct).toHaveBeenCalledWith('100 Credits');
-      expect(stripeService.createPrice).toHaveBeenCalledWith(
+      expect(paymentAdapter.createProduct).toHaveBeenCalledWith('100 Credits');
+      expect(paymentAdapter.createPrice).toHaveBeenCalledWith(
         'prod_addon',
         1000,
         'usd',
-        'month',
       );
       expect(prisma.addonPackage.create).toHaveBeenCalled();
     });
@@ -453,7 +463,7 @@ describe('BillingService', () => {
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
         mockAddon,
       );
-      (stripeService.updateProduct as jest.Mock).mockResolvedValue({});
+      (paymentAdapter.updateProduct as jest.Mock).mockResolvedValue({});
       (prisma.addonPackage.update as jest.Mock).mockResolvedValue(updated);
 
       const result = await service.updateAddonPackage('addon_1', {
@@ -461,7 +471,7 @@ describe('BillingService', () => {
       });
 
       expect(result).toEqual(updated);
-      expect(stripeService.updateProduct).toHaveBeenCalledWith(
+      expect(paymentAdapter.updateProduct).toHaveBeenCalledWith(
         'prod_addon',
         'New Name',
       );
@@ -484,13 +494,13 @@ describe('BillingService', () => {
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
         mockAddon,
       );
-      (stripeService.archiveProduct as jest.Mock).mockResolvedValue({});
+      (paymentAdapter.archiveProduct as jest.Mock).mockResolvedValue({});
       (prisma.addonPackage.update as jest.Mock).mockResolvedValue(updated);
 
       const result = await service.deactivateAddonPackage('addon_1');
 
       expect(result).toEqual(updated);
-      expect(stripeService.archiveProduct).toHaveBeenCalledWith('prod_addon');
+      expect(paymentAdapter.archiveProduct).toHaveBeenCalledWith('prod_addon');
       expect(prisma.addonPackage.update).toHaveBeenCalledWith({
         where: { id: 'addon_1' },
         data: { status: 'INACTIVE' },
@@ -513,7 +523,7 @@ describe('BillingService', () => {
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.planPrice.findUnique as jest.Mock).mockResolvedValue(mockPrice);
-      (stripeService.createSubscription as jest.Mock).mockResolvedValue(
+      (paymentAdapter.createSubscription as jest.Mock).mockResolvedValue(
         mockSub,
       );
 
@@ -523,7 +533,7 @@ describe('BillingService', () => {
         status: 'Accepted',
         stripeSubscriptionId: 'sub_123',
       });
-      expect(stripeService.createSubscription).toHaveBeenCalledWith(
+      expect(paymentAdapter.createSubscription).toHaveBeenCalledWith(
         'cus_123',
         'stripe_price_123',
       );
@@ -589,13 +599,13 @@ describe('BillingService', () => {
         amount: 500,
         currency: 'usd',
       };
-      const mockPaymentIntent = { id: 'pi_123', client_secret: 'secret_123' };
+      const mockPaymentIntent = { id: 'pi_123', clientSecret: 'secret_123' };
 
       (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
       (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
         mockAddon,
       );
-      (stripeService.createPaymentIntent as jest.Mock).mockResolvedValue(
+      (paymentAdapter.createPaymentIntent as jest.Mock).mockResolvedValue(
         mockPaymentIntent,
       );
 
@@ -606,7 +616,7 @@ describe('BillingService', () => {
         paymentIntentId: 'pi_123',
         clientSecret: 'secret_123',
       });
-      expect(stripeService.createPaymentIntent).toHaveBeenCalledWith(
+      expect(paymentAdapter.createPaymentIntent).toHaveBeenCalledWith(
         500,
         'usd',
         'cus_123',

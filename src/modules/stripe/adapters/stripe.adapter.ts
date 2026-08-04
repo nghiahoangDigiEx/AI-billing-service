@@ -2,10 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 import { CONFIG_KEYS } from '../../../common/constants/config.constants';
+import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
+import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
 
 @Injectable()
-export class StripeService {
-  private readonly logger = new Logger(StripeService.name);
+export class StripeAdapter implements PaymentProviderAdapter {
+  private readonly logger = new Logger(StripeAdapter.name);
   private stripe: Stripe;
 
   constructor(private configService: ConfigService) {
@@ -22,14 +24,14 @@ export class StripeService {
     });
   }
 
-  async createCustomer(email: string, name?: string): Promise<Stripe.Customer> {
+  async createCustomer(email: string, name?: string): Promise<{ id: string }> {
     try {
       const customer = await this.stripe.customers.create({
         email,
         name,
       });
       this.logger.log(`Created Stripe customer: ${customer.id} for ${email}`);
-      return customer;
+      return { id: customer.id };
     } catch (error) {
       this.logger.error(`Failed to create Stripe customer for ${email}`, error);
       throw error;
@@ -39,7 +41,7 @@ export class StripeService {
   async createSubscription(
     customerId: string,
     priceId: string,
-  ): Promise<Stripe.Subscription> {
+  ): Promise<{ id: string }> {
     try {
       const subscription = await this.stripe.subscriptions.create({
         customer: customerId,
@@ -48,7 +50,7 @@ export class StripeService {
       this.logger.log(
         `Created subscription: ${subscription.id} for customer ${customerId}`,
       );
-      return subscription;
+      return { id: subscription.id };
     } catch (error) {
       this.logger.error(
         `Failed to create subscription for customer ${customerId}`,
@@ -58,14 +60,12 @@ export class StripeService {
     }
   }
 
-  async cancelSubscription(
-    subscriptionId: string,
-  ): Promise<Stripe.Subscription> {
+  async cancelSubscription(subscriptionId: string): Promise<{ id: string }> {
     try {
       const subscription =
         await this.stripe.subscriptions.cancel(subscriptionId);
       this.logger.log(`Cancelled subscription: ${subscriptionId}`);
-      return subscription;
+      return { id: subscription.id };
     } catch (error) {
       this.logger.error(
         `Failed to cancel subscription ${subscriptionId}`,
@@ -75,11 +75,11 @@ export class StripeService {
     }
   }
 
-  async createProduct(name: string): Promise<Stripe.Product> {
+  async createProduct(name: string): Promise<{ id: string }> {
     try {
       const product = await this.stripe.products.create({ name });
       this.logger.log(`Created Stripe product: ${product.id} - ${name}`);
-      return product;
+      return { id: product.id };
     } catch (error) {
       this.logger.error(`Failed to create Stripe product: ${name}`, error);
       throw error;
@@ -90,19 +90,19 @@ export class StripeService {
     productId: string,
     amount: number,
     currency: string,
-    interval: 'month' | 'year',
-  ): Promise<Stripe.Price> {
+    interval?: SubscriptionInterval,
+  ): Promise<{ id: string }> {
     try {
       const price = await this.stripe.prices.create({
         product: productId,
         unit_amount: amount,
         currency,
-        recurring: { interval },
+        ...(interval ? { recurring: { interval } } : {}),
       });
       this.logger.log(
         `Created Stripe price: ${price.id} for product ${productId}`,
       );
-      return price;
+      return { id: price.id };
     } catch (error) {
       this.logger.error(
         `Failed to create price for product ${productId}`,
@@ -112,13 +112,13 @@ export class StripeService {
     }
   }
 
-  async archiveProduct(productId: string): Promise<Stripe.Product> {
+  async archiveProduct(productId: string): Promise<{ id: string }> {
     try {
       const product = await this.stripe.products.update(productId, {
         active: false,
       });
       this.logger.log(`Archived Stripe product: ${productId}`);
-      return product;
+      return { id: product.id };
     } catch (error) {
       this.logger.error(`Failed to archive product ${productId}`, error);
       throw error;
@@ -128,11 +128,11 @@ export class StripeService {
   async updateProduct(
     productId: string,
     name: string,
-  ): Promise<Stripe.Product> {
+  ): Promise<{ id: string }> {
     try {
       const product = await this.stripe.products.update(productId, { name });
       this.logger.log(`Updated Stripe product: ${productId}`);
-      return product;
+      return { id: product.id };
     } catch (error) {
       this.logger.error(`Failed to update product ${productId}`, error);
       throw error;
@@ -144,7 +144,7 @@ export class StripeService {
     currency: string,
     customer: string,
     metadata: Record<string, string>,
-  ): Promise<Stripe.PaymentIntent> {
+  ): Promise<{ id: string; clientSecret: string | null }> {
     try {
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount,
@@ -153,34 +153,12 @@ export class StripeService {
         metadata,
       });
       this.logger.log(`Created payment intent: ${paymentIntent.id}`);
-      return paymentIntent;
+      return {
+        id: paymentIntent.id,
+        clientSecret: paymentIntent.client_secret,
+      };
     } catch (error) {
       this.logger.error(`Failed to create payment intent`, error);
-      throw error;
-    }
-  }
-
-  verifyWebhookSignature(
-    payload: string | Buffer,
-    signature: string,
-  ): Stripe.Event {
-    const webhookSecret = this.configService.get<string>(
-      'STRIPE_WEBHOOK_SECRET',
-    );
-    if (!webhookSecret) {
-      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
-    }
-
-    try {
-      const event = this.stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        webhookSecret,
-      );
-      this.logger.log(`Verified webhook signature for event: ${event.id}`);
-      return event;
-    } catch (error) {
-      this.logger.error('Webhook signature verification failed', error);
       throw error;
     }
   }

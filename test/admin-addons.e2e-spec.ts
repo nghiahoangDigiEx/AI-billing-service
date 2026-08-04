@@ -4,7 +4,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 const request = require('supertest');
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
-import { StripeService } from './../src/modules/billing/services/stripe.service';
+import { PaymentProviderFactory } from './../src/modules/payment/factories/payment-provider.factory';
 import { Role } from '@prisma/client';
 
 jest.setTimeout(30000);
@@ -12,24 +12,27 @@ jest.setTimeout(30000);
 describe('Admin Addons API (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
-  let mockStripeService: Partial<StripeService>;
+  let mockPaymentProviderFactory: any;
   let adminToken: string;
   let userToken: string;
 
   beforeAll(async () => {
-    mockStripeService = {
+    const mockAdapter = {
       createProduct: jest.fn().mockResolvedValue({ id: 'prod_mock123' }),
       createPrice: jest.fn().mockResolvedValue({ id: 'price_mock123' }),
       archiveProduct: jest
         .fn()
         .mockResolvedValue({ id: 'prod_mock123', active: false }),
     };
+    mockPaymentProviderFactory = {
+      getAdapter: jest.fn().mockReturnValue(mockAdapter),
+    };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(StripeService)
-      .useValue(mockStripeService)
+      .overrideProvider(PaymentProviderFactory)
+      .useValue(mockPaymentProviderFactory)
       .compile();
 
     app = moduleFixture.createNestApplication();

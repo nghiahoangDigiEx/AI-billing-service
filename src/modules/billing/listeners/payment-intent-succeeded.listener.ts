@@ -1,30 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import Stripe from 'stripe';
-import { WebhookStrategy } from './webhook-strategy.interface';
-import { ADDON_PURCHASED } from '../../../events/event.constants';
+import { OnEvent } from '@nestjs/event-emitter';
+import { PaymentEvents } from '../../../events/payment.events';
+import type { PaymentIntentSucceededEvent } from '../../../events/payment.events';
 import { CreditSource, CreditStatus } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ADDON_PURCHASED } from '../../../events/event.constants';
 
 @Injectable()
-export class PaymentIntentSucceededStrategy implements WebhookStrategy {
-  private readonly logger = new Logger(PaymentIntentSucceededStrategy.name);
+export class PaymentIntentSucceededListener {
+  private readonly logger = new Logger(PaymentIntentSucceededListener.name);
 
   constructor(
     private prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  canHandle(eventType: string): boolean {
-    return eventType === 'payment_intent.succeeded';
-  }
-
-  async handle(event: Stripe.Event): Promise<void> {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    const { userId, addonPackageId } = paymentIntent.metadata;
+  @OnEvent(PaymentEvents.PAYMENT_INTENT_SUCCEEDED)
+  async handle(event: PaymentIntentSucceededEvent): Promise<void> {
+    const { userId, addonId: addonPackageId } = event.metadata;
     if (!userId || !addonPackageId) {
       this.logger.log(
-        `PaymentIntent ${paymentIntent.id} missing addon metadata. Skipping.`,
+        `PaymentIntent ${event.paymentIntentId} missing addon metadata. Skipping.`,
       );
       return;
     }
@@ -45,7 +42,7 @@ export class PaymentIntentSucceededStrategy implements WebhookStrategy {
         data: {
           userId,
           addonPackageId,
-          stripePaymentIntentId: paymentIntent.id,
+          stripePaymentIntentId: event.paymentIntentId,
         },
       });
 

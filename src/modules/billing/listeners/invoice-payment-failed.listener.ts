@@ -1,56 +1,46 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import Stripe from 'stripe';
-import { WebhookStrategy } from './webhook-strategy.interface';
+import { OnEvent } from '@nestjs/event-emitter';
+import { PaymentEvents } from '../../../events/payment.events';
+import type { InvoicePaymentFailedEvent } from '../../../events/payment.events';
 import { SubscriptionStatus, CreditSource, CreditStatus } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SUBSCRIPTION_PAYMENT_FAILED } from '../../../events/event.constants';
 
 @Injectable()
-export class InvoicePaymentFailedStrategy implements WebhookStrategy {
-  private readonly logger = new Logger(InvoicePaymentFailedStrategy.name);
+export class InvoicePaymentFailedListener {
+  private readonly logger = new Logger(InvoicePaymentFailedListener.name);
 
   constructor(
     private prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  canHandle(eventType: string): boolean {
-    return eventType === 'invoice.payment_failed';
-  }
+  @OnEvent(PaymentEvents.INVOICE_PAYMENT_FAILED)
+  async handle(event: InvoicePaymentFailedEvent): Promise<void> {
+    if (!event.subscriptionId) return;
 
-  async handle(event: Stripe.Event): Promise<void> {
-    const invoice = event.data.object as Stripe.Invoice;
-    const invoiceWithSub = invoice as Stripe.Invoice & {
-      subscription?: string;
-    };
-    if (!invoiceWithSub.subscription) return;
-    const stripeSubscriptionId = invoiceWithSub.subscription;
-
-    const stripeCustomerId =
-      typeof invoice.customer === 'string'
-        ? invoice.customer
-        : invoice.customer?.id;
-
-    if (!stripeCustomerId) {
-      this.logger.warn(`Invoice ${invoice.id} has no customer ID.`);
+    if (!event.customerId) {
+      this.logger.warn(
+        `Invoice event ${event.providerEventId} has no customer ID.`,
+      );
       return;
     }
 
     const user = await this.prisma.user.findFirst({
-      where: { stripeCustomerId },
+      where: { stripeCustomerId: event.customerId },
     });
 
     if (!user) {
       this.logger.warn(
-        `User with stripeCustomerId ${stripeCustomerId} not found.`,
+        `User with stripeCustomerId ${event.customerId} not found.`,
       );
       return;
     }
 
     const subscription = await this.prisma.subscription.findFirst({
       where: {
-        stripeSubscriptionId,
+        stripeSubscriptionId: event.subscriptionId,
         userId: user.id,
         status: SubscriptionStatus.ACTIVE,
       },
@@ -58,19 +48,17 @@ export class InvoicePaymentFailedStrategy implements WebhookStrategy {
 
     if (!subscription) {
       this.logger.warn(
-        `Subscription ${stripeSubscriptionId} not found or not active for invoice.payment_failed`,
+        `Subscription ${event.subscriptionId} not found or not active for payment failed`,
       );
       return;
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // Mark subscription as PAST_DUE
       await tx.subscription.update({
         where: { id: subscription.id },
         data: { status: SubscriptionStatus.PAST_DUE },
       });
 
-      // Freeze add-on credits
       await tx.creditBalance.updateMany({
         where: {
           userId: user.id,

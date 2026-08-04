@@ -4,33 +4,36 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 const request = require('supertest');
 import { AppModule } from './../src/app.module';
 import { PrismaService } from './../src/prisma/prisma.service';
-import { StripeService } from './../src/modules/billing/services/stripe.service';
+import { PaymentProviderFactory } from './../src/modules/payment/factories/payment-provider.factory';
 
 jest.setTimeout(30000);
 
 describe('User Subscriptions API (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
-  let mockStripeService: Partial<StripeService>;
+  let mockPaymentProviderFactory: any;
   let userToken: string;
   let userId: string;
   let planId: string;
   let planPriceId: string;
 
   beforeAll(async () => {
-    mockStripeService = {
+    const mockAdapter = {
       createSubscription: jest.fn().mockResolvedValue({ id: 'sub_mock123' }),
       createPaymentIntent: jest.fn().mockResolvedValue({
         id: 'pi_mock123',
-        client_secret: 'secret_mock123',
+        clientSecret: 'secret_mock123',
       }),
+    };
+    mockPaymentProviderFactory = {
+      getAdapter: jest.fn().mockReturnValue(mockAdapter),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      .overrideProvider(StripeService)
-      .useValue(mockStripeService)
+      .overrideProvider(PaymentProviderFactory)
+      .useValue(mockPaymentProviderFactory)
       .compile();
 
     app = moduleFixture.createNestApplication();
