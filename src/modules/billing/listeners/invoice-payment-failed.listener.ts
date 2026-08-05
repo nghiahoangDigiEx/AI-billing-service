@@ -4,8 +4,11 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '@/events/payment.events';
 import type { InvoicePaymentFailedEvent } from '@/events/payment.events';
 import { SubscriptionStatus } from '@prisma/client';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SUBSCRIPTION_PAYMENT_FAILED } from '@/events/event.constants';
+import { createDomainEvent } from '@/events/domain-event';
+import type { SubscriptionPaymentFailedPayload } from '@/events/payloads';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class InvoicePaymentFailedListener {
@@ -13,7 +16,8 @@ export class InvoicePaymentFailedListener {
 
   constructor(
     private prisma: PrismaService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly outboxWriter: BillingOutboxWriter,
+    private readonly relay: OutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.INVOICE_PAYMENT_FAILED)
@@ -53,14 +57,29 @@ export class InvoicePaymentFailedListener {
       return;
     }
 
-    await this.prisma.subscription.update({
-      where: { id: subscription.id },
-      data: { status: SubscriptionStatus.PAST_DUE },
+    const domainEvent = createDomainEvent<SubscriptionPaymentFailedPayload>(
+      SUBSCRIPTION_PAYMENT_FAILED,
+      {
+        userId: user.id,
+        sourceRef: event.providerEventId,
+      },
+      {
+        providerEventId: event.providerEventId,
+        causationId: event.providerEventId,
+        correlationId: event.providerEventId,
+      },
+      { id: event.providerEventId },
+    );
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.subscription.update({
+        where: { id: subscription.id },
+        data: { status: SubscriptionStatus.PAST_DUE },
+      });
+
+      await this.outboxWriter.insert(tx, domainEvent);
     });
 
-    this.eventEmitter.emit(SUBSCRIPTION_PAYMENT_FAILED, {
-      userId: user.id,
-      sourceRef: event.providerEventId,
-    });
+    await this.relay.kick();
   }
 }

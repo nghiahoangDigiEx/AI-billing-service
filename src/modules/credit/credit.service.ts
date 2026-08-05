@@ -4,6 +4,7 @@ import {
   CreditSource,
   CreditStatus,
   CreditTransactionType,
+  Prisma,
 } from '@prisma/client';
 import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 import { SortOrder } from '@/common/enums/sort-order.enum';
@@ -14,7 +15,20 @@ export class CreditService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async isEventProcessed(
+    tx: Prisma.TransactionClient,
+    eventId: string,
+  ): Promise<boolean> {
+    const existing = await tx.creditInbox.findUnique({
+      where: { eventId },
+    });
+
+    return existing !== null;
+  }
+
   async provisionMonthlyCredits(params: {
+    eventId: string;
+    eventType: string;
     userId: string;
     creditsIncluded: number;
     periodStart: Date;
@@ -23,6 +37,8 @@ export class CreditService {
     planSlug?: string;
   }): Promise<void> {
     const {
+      eventId,
+      eventType,
       userId,
       creditsIncluded,
       periodStart,
@@ -32,6 +48,10 @@ export class CreditService {
     } = params;
 
     await this.prisma.$transaction(async (tx) => {
+      if (await this.isEventProcessed(tx, eventId)) {
+        return;
+      }
+
       await tx.creditBalance.updateMany({
         where: {
           userId,
@@ -84,6 +104,13 @@ export class CreditService {
           data: { status: CreditStatus.ACTIVE, unfrozenAt: new Date() },
         });
       }
+
+      await tx.creditInbox.create({
+        data: {
+          eventId,
+          type: eventType,
+        },
+      });
     });
 
     this.logger.log(
@@ -92,13 +119,19 @@ export class CreditService {
   }
 
   async provisionAddonCredits(params: {
+    eventId: string;
+    eventType: string;
     userId: string;
     credits: number;
     sourceRef: string;
   }): Promise<void> {
-    const { userId, credits, sourceRef } = params;
+    const { eventId, eventType, userId, credits, sourceRef } = params;
 
     await this.prisma.$transaction(async (tx) => {
+      if (await this.isEventProcessed(tx, eventId)) {
+        return;
+      }
+
       const balance = await tx.creditBalance.create({
         data: {
           userId,
@@ -121,13 +154,29 @@ export class CreditService {
           description: 'Add-on credit provision',
         },
       });
+
+      await tx.creditInbox.create({
+        data: {
+          eventId,
+          type: eventType,
+        },
+      });
     });
 
     this.logger.log(`Provisioned ${credits} add-on credits for user ${userId}`);
   }
 
-  async freezeAddonCredits(userId: string, sourceRef: string): Promise<void> {
+  async freezeAddonCredits(
+    eventId: string,
+    eventType: string,
+    userId: string,
+    sourceRef: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      if (await this.isEventProcessed(tx, eventId)) {
+        return;
+      }
+
       const frozenBalances = await tx.creditBalance.updateMany({
         where: {
           userId,
@@ -159,13 +208,29 @@ export class CreditService {
           });
         }
       }
+
+      await tx.creditInbox.create({
+        data: {
+          eventId,
+          type: eventType,
+        },
+      });
     });
 
     this.logger.log(`Frozen add-on credits for user ${userId}`);
   }
 
-  async unfreezeAddonCredits(userId: string, sourceRef: string): Promise<void> {
+  async unfreezeAddonCredits(
+    eventId: string,
+    eventType: string,
+    userId: string,
+    sourceRef: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      if (await this.isEventProcessed(tx, eventId)) {
+        return;
+      }
+
       const unfrozenBalances = await tx.creditBalance.updateMany({
         where: {
           userId,
@@ -197,6 +262,13 @@ export class CreditService {
           });
         }
       }
+
+      await tx.creditInbox.create({
+        data: {
+          eventId,
+          type: eventType,
+        },
+      });
     });
 
     this.logger.log(`Unfrozen add-on credits for user ${userId}`);

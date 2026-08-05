@@ -9,11 +9,11 @@ import Stripe from 'stripe';
 export class InvoicePaymentFailedHandler implements StripeEventHandler {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  handle(event: ParsedWebhookEvent): void {
+  async handle(event: ParsedWebhookEvent): Promise<void> {
     const invoiceFailed = event.data as Stripe.Invoice & {
       subscription?: string;
     };
-    this.eventEmitter.emit(PaymentEvents.INVOICE_PAYMENT_FAILED, {
+    await this.eventEmitter.emitAsync(PaymentEvents.INVOICE_PAYMENT_FAILED, {
       providerEventId: event.id,
       subscriptionId: invoiceFailed.subscription as string,
       customerId: invoiceFailed.customer as string,

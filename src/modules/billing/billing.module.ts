@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { PaymentModule } from '@/modules/payment/payment.module';
+import { EventOutboxModule } from '@/modules/event-outbox/event-outbox.module';
 import { BillingService } from '@/modules/billing/services/billing.service';
 import { BillingController } from '@/modules/billing/controllers/billing.controller';
 import { AddonController } from '@/modules/billing/controllers/addon.controller';
@@ -22,6 +23,7 @@ import { PaymentIntentSucceededListener } from '@/modules/billing/listeners/paym
     ScheduleModule.forRoot(),
     PrismaModule,
     PaymentModule,
+    EventOutboxModule,
   ],
   controllers: [
     BillingController,

@@ -9,9 +9,9 @@ import Stripe from 'stripe';
 export class SubscriptionDeletedHandler implements StripeEventHandler {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  handle(event: ParsedWebhookEvent): void {
+  async handle(event: ParsedWebhookEvent): Promise<void> {
     const subscription = event.data as Stripe.Subscription;
-    this.eventEmitter.emit(PaymentEvents.SUBSCRIPTION_DELETED, {
+    await this.eventEmitter.emitAsync(PaymentEvents.SUBSCRIPTION_DELETED, {
       providerEventId: event.id,
       subscriptionId: subscription.id,
     });

@@ -21,6 +21,10 @@ describe('CreditService', () => {
     creditTransaction: {
       create: jest.Mock;
     };
+    creditInbox: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -33,6 +37,10 @@ describe('CreditService', () => {
         update: jest.fn(),
       },
       creditTransaction: {
+        create: jest.fn(),
+      },
+      creditInbox: {
+        findUnique: jest.fn(),
         create: jest.fn(),
       },
     };
@@ -57,6 +65,8 @@ describe('CreditService', () => {
   describe('provisionMonthlyCredits', () => {
     it('should provision paid plan monthly credits and unfreeze addons', async () => {
       const params = {
+        eventId: 'event_123',
+        eventType: 'invoice.paid',
         userId: 'user_123',
         creditsIncluded: 1000,
         periodStart: new Date('2026-01-01'),
@@ -71,6 +81,7 @@ describe('CreditService', () => {
         remainingCredits: 1000,
       };
 
+      mockTx.creditInbox.findUnique.mockResolvedValue(null);
       mockTx.creditBalance.updateMany.mockResolvedValue({ count: 1 });
       mockTx.creditBalance.create.mockResolvedValue(newBalance);
       mockTx.creditTransaction.create.mockResolvedValue({});
@@ -122,10 +133,19 @@ describe('CreditService', () => {
           unfrozenAt: expect.any(Date),
         },
       });
+
+      expect(mockTx.creditInbox.create).toHaveBeenCalledWith({
+        data: {
+          eventId: params.eventId,
+          type: params.eventType,
+        },
+      });
     });
 
     it('should provision free plan monthly credits and freeze addons', async () => {
       const params = {
+        eventId: 'event_456',
+        eventType: 'invoice.paid',
         userId: 'user_123',
         creditsIncluded: 100,
         periodStart: new Date('2026-01-01'),
@@ -140,6 +160,7 @@ describe('CreditService', () => {
         remainingCredits: 100,
       };
 
+      mockTx.creditInbox.findUnique.mockResolvedValue(null);
       mockTx.creditBalance.updateMany.mockResolvedValue({ count: 1 });
       mockTx.creditBalance.create.mockResolvedValue(newBalance);
       mockTx.creditTransaction.create.mockResolvedValue({});
@@ -158,12 +179,48 @@ describe('CreditService', () => {
           frozenAt: expect.any(Date),
         },
       });
+
+      expect(mockTx.creditInbox.create).toHaveBeenCalledWith({
+        data: {
+          eventId: params.eventId,
+          type: params.eventType,
+        },
+      });
+    });
+
+    it('should skip processing if event already in inbox', async () => {
+      const params = {
+        eventId: 'event_123',
+        eventType: 'invoice.paid',
+        userId: 'user_123',
+        creditsIncluded: 1000,
+        periodStart: new Date('2026-01-01'),
+        periodEnd: new Date('2026-02-01'),
+        sourceRef: 'event_123',
+        planSlug: 'pro',
+      };
+
+      mockTx.creditInbox.findUnique.mockResolvedValue({
+        id: 'inbox_123',
+        eventId: params.eventId,
+      });
+
+      await service.provisionMonthlyCredits(params);
+
+      expect(mockTx.creditInbox.findUnique).toHaveBeenCalledWith({
+        where: { eventId: params.eventId },
+      });
+      expect(mockTx.creditBalance.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.creditBalance.create).not.toHaveBeenCalled();
+      expect(mockTx.creditInbox.create).not.toHaveBeenCalled();
     });
   });
 
   describe('provisionAddonCredits', () => {
     it('should provision addon credits', async () => {
       const params = {
+        eventId: 'purchase_123',
+        eventType: 'addon.purchased',
         userId: 'user_123',
         credits: 500,
         sourceRef: 'purchase_123',
@@ -175,6 +232,7 @@ describe('CreditService', () => {
         remainingCredits: 500,
       };
 
+      mockTx.creditInbox.findUnique.mockResolvedValue(null);
       mockTx.creditBalance.create.mockResolvedValue(newBalance);
       mockTx.creditTransaction.create.mockResolvedValue({});
 
@@ -203,11 +261,40 @@ describe('CreditService', () => {
           description: 'Add-on credit provision',
         },
       });
+
+      expect(mockTx.creditInbox.create).toHaveBeenCalledWith({
+        data: {
+          eventId: params.eventId,
+          type: params.eventType,
+        },
+      });
+    });
+
+    it('should skip processing if event already in inbox', async () => {
+      const params = {
+        eventId: 'purchase_123',
+        eventType: 'addon.purchased',
+        userId: 'user_123',
+        credits: 500,
+        sourceRef: 'purchase_123',
+      };
+
+      mockTx.creditInbox.findUnique.mockResolvedValue({
+        id: 'inbox_456',
+        eventId: params.eventId,
+      });
+
+      await service.provisionAddonCredits(params);
+
+      expect(mockTx.creditBalance.create).not.toHaveBeenCalled();
+      expect(mockTx.creditInbox.create).not.toHaveBeenCalled();
     });
   });
 
   describe('freezeAddonCredits', () => {
     it('should freeze active addon credits and create transactions', async () => {
+      const eventId = 'event_456';
+      const eventType = 'subscription.payment_failed';
       const userId = 'user_123';
       const sourceRef = 'event_456';
 
@@ -224,11 +311,12 @@ describe('CreditService', () => {
         },
       ];
 
+      mockTx.creditInbox.findUnique.mockResolvedValue(null);
       mockTx.creditBalance.updateMany.mockResolvedValue({ count: 2 });
       mockTx.creditBalance.findMany.mockResolvedValue(frozenBalances);
       mockTx.creditTransaction.create.mockResolvedValue({});
 
-      await service.freezeAddonCredits(userId, sourceRef);
+      await service.freezeAddonCredits(eventId, eventType, userId, sourceRef);
 
       expect(mockTx.creditBalance.updateMany).toHaveBeenCalledWith({
         where: {
@@ -254,11 +342,37 @@ describe('CreditService', () => {
           description: 'Add-on credits frozen',
         },
       });
+
+      expect(mockTx.creditInbox.create).toHaveBeenCalledWith({
+        data: {
+          eventId,
+          type: eventType,
+        },
+      });
+    });
+
+    it('should skip processing if event already in inbox', async () => {
+      const eventId = 'event_456';
+      const eventType = 'subscription.payment_failed';
+      const userId = 'user_123';
+      const sourceRef = 'event_456';
+
+      mockTx.creditInbox.findUnique.mockResolvedValue({
+        id: 'inbox_789',
+        eventId,
+      });
+
+      await service.freezeAddonCredits(eventId, eventType, userId, sourceRef);
+
+      expect(mockTx.creditBalance.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.creditInbox.create).not.toHaveBeenCalled();
     });
   });
 
   describe('unfreezeAddonCredits', () => {
     it('should unfreeze frozen addon credits and create transactions', async () => {
+      const eventId = 'event_789';
+      const eventType = 'subscription.recovered';
       const userId = 'user_123';
       const sourceRef = 'event_789';
 
@@ -270,11 +384,12 @@ describe('CreditService', () => {
         },
       ];
 
+      mockTx.creditInbox.findUnique.mockResolvedValue(null);
       mockTx.creditBalance.updateMany.mockResolvedValue({ count: 1 });
       mockTx.creditBalance.findMany.mockResolvedValue(unfrozenBalances);
       mockTx.creditTransaction.create.mockResolvedValue({});
 
-      await service.unfreezeAddonCredits(userId, sourceRef);
+      await service.unfreezeAddonCredits(eventId, eventType, userId, sourceRef);
 
       expect(mockTx.creditBalance.updateMany).toHaveBeenCalledWith({
         where: {
@@ -297,6 +412,13 @@ describe('CreditService', () => {
           balanceAfter: 100,
           sourceRef,
           description: 'Add-on credits unfrozen',
+        },
+      });
+
+      expect(mockTx.creditInbox.create).toHaveBeenCalledWith({
+        data: {
+          eventId,
+          type: eventType,
         },
       });
     });

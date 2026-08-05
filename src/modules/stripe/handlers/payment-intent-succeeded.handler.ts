@@ -9,9 +9,9 @@ import Stripe from 'stripe';
 export class PaymentIntentSucceededHandler implements StripeEventHandler {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  handle(event: ParsedWebhookEvent): void {
+  async handle(event: ParsedWebhookEvent): Promise<void> {
     const paymentIntent = event.data as Stripe.PaymentIntent;
-    this.eventEmitter.emit(PaymentEvents.PAYMENT_INTENT_SUCCEEDED, {
+    await this.eventEmitter.emitAsync(PaymentEvents.PAYMENT_INTENT_SUCCEEDED, {
       providerEventId: event.id,
       paymentIntentId: paymentIntent.id,
       metadata: paymentIntent.metadata,

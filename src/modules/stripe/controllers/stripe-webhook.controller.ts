@@ -1,4 +1,4 @@
-import { Controller, Post, Req, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Req, Res, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { StripeWebhookService } from '@/modules/stripe/services/stripe-webhook.service';
 import { WebhookStrategyFactory } from '@/modules/payment/factories/webhook-strategy.factory';
@@ -8,6 +8,8 @@ import { Public } from '@/modules/auth/decorators/public.decorator';
 @Public()
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
+  private readonly logger = new Logger(StripeWebhookController.name);
+
   constructor(
     private readonly stripeWebhookService: StripeWebhookService,
     private readonly webhookStrategyFactory: WebhookStrategyFactory,
@@ -24,7 +26,6 @@ export class StripeWebhookController {
     }
 
     try {
-      // Use raw body for signature verification
       const reqWithRawBody = req as unknown as { rawBody: string | Buffer };
       const rawBody = reqWithRawBody.rawBody;
       const strategy = this.webhookStrategyFactory.getStrategy(
@@ -32,10 +33,14 @@ export class StripeWebhookController {
       );
       const event = await strategy.parseEvent(rawBody, signature as string);
 
-      // Process in background, don't wait for completion to respond quickly to Stripe
-      this.stripeWebhookService.handleEvent(event).catch((err) => {
-        console.error('Background webhook processing failed:', err);
-      });
+      try {
+        await this.stripeWebhookService.handleEvent(event);
+      } catch (err) {
+        const error = err as { code?: string };
+        if (error.code !== 'P2002') {
+          this.logger.error('Webhook processing failed', err as Error);
+        }
+      }
 
       res.status(HttpStatus.OK).send({ received: true });
     } catch (error) {

@@ -3,8 +3,11 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PaymentEvents } from '@/events/payment.events';
 import type { PaymentIntentSucceededEvent } from '@/events/payment.events';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ADDON_PURCHASED } from '@/events/event.constants';
+import { createDomainEvent } from '@/events/domain-event';
+import type { AddonPurchasedPayload } from '@/events/payloads';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class PaymentIntentSucceededListener {
@@ -12,7 +15,8 @@ export class PaymentIntentSucceededListener {
 
   constructor(
     private prisma: PrismaService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly outboxWriter: BillingOutboxWriter,
+    private readonly relay: OutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.PAYMENT_INTENT_SUCCEEDED)
@@ -36,22 +40,42 @@ export class PaymentIntentSucceededListener {
       return;
     }
 
-    const purchase = await this.prisma.addonPurchase.create({
-      data: {
-        userId,
-        addonPackageId,
-        stripePaymentIntentId: event.paymentIntentId,
-      },
+    const domainEventPayload: AddonPurchasedPayload = {
+      userId,
+      credits: addonPackage.credits,
+      sourceRef: event.paymentIntentId,
+    };
+
+    await this.prisma.$transaction(async (tx) => {
+      const purchase = await tx.addonPurchase.create({
+        data: {
+          userId,
+          addonPackageId,
+          stripePaymentIntentId: event.paymentIntentId,
+        },
+      });
+
+      const domainEvent = createDomainEvent<AddonPurchasedPayload>(
+        ADDON_PURCHASED,
+        {
+          ...domainEventPayload,
+          sourceRef: purchase.id,
+        },
+        {
+          providerEventId: event.providerEventId,
+          causationId: event.providerEventId,
+          correlationId: event.providerEventId,
+        },
+        { id: purchase.id },
+      );
+
+      await this.outboxWriter.insert(tx, domainEvent);
     });
 
     this.logger.log(
       `Successfully processed add-on purchase for user ${userId}`,
     );
 
-    this.eventEmitter.emit(ADDON_PURCHASED, {
-      userId,
-      credits: addonPackage.credits,
-      sourceRef: purchase.id,
-    });
+    await this.relay.kick();
   }
 }

@@ -27,6 +27,7 @@ describe('User Subscriptions API (e2e)', () => {
     };
     mockPaymentProviderFactory = {
       getAdapter: jest.fn().mockReturnValue(mockAdapter),
+      registerAdapter: jest.fn(),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
