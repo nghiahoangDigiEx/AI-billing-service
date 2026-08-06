@@ -28,8 +28,9 @@ describe('AuthController (e2e)', () => {
 
   afterAll(async () => {
     await prisma.user.deleteMany();
-    await prisma.$disconnect();
     await app.close();
+    // Let NestJS lifecycle handle Prisma disconnect, or do it after app close
+    await prisma.$disconnect();
   });
 
   describe('/auth/register (POST)', () => {

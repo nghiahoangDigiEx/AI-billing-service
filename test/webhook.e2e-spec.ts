@@ -67,8 +67,9 @@ describe('WebhookController (e2e)', () => {
     await prisma.plan.deleteMany();
     await prisma.addonPackage.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.$disconnect();
     await app.close();
+    // Let NestJS lifecycle handle Prisma disconnect, or do it after app close
+    await prisma.$disconnect();
   });
 
   describe('POST /webhooks/stripe', () => {

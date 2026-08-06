@@ -11,6 +11,7 @@ import { PublicPlanController } from '@/modules/billing/controllers/public-plan.
 import { PublicAddonController } from '@/modules/billing/controllers/public-addon.controller';
 import { SubscriptionController } from '@/modules/billing/controllers/subscription.controller';
 import { BillingScheduler } from '@/modules/billing/services/billing.scheduler';
+import { BillingUoW } from '@/modules/billing/billing.uow';
 
 import { InvoicePaidListener } from '@/modules/billing/listeners/invoice-paid.listener';
 import { InvoicePaymentFailedListener } from '@/modules/billing/listeners/invoice-payment-failed.listener';
@@ -39,6 +40,7 @@ import { PaymentIntentSucceededListener } from '@/modules/billing/listeners/paym
     InvoicePaymentFailedListener,
     SubscriptionDeletedListener,
     PaymentIntentSucceededListener,
+    BillingUoW,
   ],
   exports: [BillingService],
 })

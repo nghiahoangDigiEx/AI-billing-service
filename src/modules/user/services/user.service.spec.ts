@@ -1,42 +1,47 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserService } from '@/modules/user/services/user.service';
-import { PrismaService } from '@/prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserUoW } from '@/modules/user/user.uow';
 import { AppException } from '@/common/exceptions';
 import { Role } from '@prisma/client';
 import { USER_REGISTERED } from '@/events/event.constants';
 
 describe('UserService', () => {
-  const mockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      findMany: jest.fn(),
+  const mockUserRepo = {
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    findByProviderId: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    findAll: jest.fn(),
+  };
+
+  const mockOutboxRepo = {
+    publish: jest.fn(),
+  };
+
+  const mockUserUoW = {
+    execute: jest
+      .fn()
+      .mockImplementation((cb: (repos: any) => Promise<any>) => {
+        return cb({
+          user: mockUserRepo,
+          outbox: mockOutboxRepo,
+        });
+      }),
+    readOnly: {
+      user: mockUserRepo,
+      outbox: mockOutboxRepo,
     },
   };
 
-  const mockEventEmitter = {
-    emit: jest.fn(),
-  };
-
   let service: UserService;
-  let prisma: typeof mockPrismaService;
-  let eventEmitter: typeof mockEventEmitter;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UserService,
-        { provide: PrismaService, useValue: mockPrismaService },
-        { provide: EventEmitter2, useValue: mockEventEmitter },
-      ],
+      providers: [UserService, { provide: UserUoW, useValue: mockUserUoW }],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    prisma = module.get(PrismaService);
-    eventEmitter = module.get(EventEmitter2);
   });
 
   afterEach(() => {
@@ -45,9 +50,9 @@ describe('UserService', () => {
 
   describe('createUser', () => {
     it('creates user and emits event', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      mockUserRepo.findByEmail.mockResolvedValue(null);
 
-      prisma.user.create.mockResolvedValue({
+      mockUserRepo.create.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
         password: 'hashed_password',
@@ -59,8 +64,8 @@ describe('UserService', () => {
         name: 'Test',
       });
 
-      expect(prisma.user.create).toHaveBeenCalled();
-      expect(eventEmitter.emit).toHaveBeenCalledWith(USER_REGISTERED, {
+      expect(mockUserRepo.create).toHaveBeenCalled();
+      expect(mockOutboxRepo.publish).toHaveBeenCalledWith(USER_REGISTERED, {
         userId: '1',
         email: 'test@example.com',
       });
@@ -68,7 +73,7 @@ describe('UserService', () => {
     });
 
     it('throws UserAlreadyExistsException when email exists', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: '1' });
+      mockUserRepo.findByEmail.mockResolvedValue({ id: '1' });
       await expect(
         service.createUser({
           email: 'test@example.com',
@@ -81,7 +86,7 @@ describe('UserService', () => {
 
   describe('findByEmailWithPassword', () => {
     it('returns the user including password', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: '1', password: 'hash' });
+      mockUserRepo.findByEmail.mockResolvedValue({ id: '1', password: 'hash' });
       const result = await service.findByEmailWithPassword('test@test.com');
       expect(result).toHaveProperty('password', 'hash');
     });
@@ -89,7 +94,7 @@ describe('UserService', () => {
 
   describe('getProfile', () => {
     it('returns user data excluding password and providerId', async () => {
-      prisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: '1',
         email: 'test@example.com',
         password: 'pass',
@@ -105,7 +110,7 @@ describe('UserService', () => {
 
   describe('updateProfile', () => {
     it('updates name and avatar fields', async () => {
-      prisma.user.update.mockResolvedValue({ id: '1', name: 'New Name' });
+      mockUserRepo.update.mockResolvedValue({ id: '1', name: 'New Name' });
       const result = await service.updateProfile('1', { name: 'New Name' });
       expect(result).toHaveProperty('name', 'New Name');
     });
@@ -113,7 +118,7 @@ describe('UserService', () => {
 
   describe('findAll', () => {
     it('returns paginated user list for admin', async () => {
-      prisma.user.findMany.mockResolvedValue([{ id: '1' }, { id: '2' }]);
+      mockUserRepo.findAll.mockResolvedValue([{ id: '1' }, { id: '2' }]);
       const result = await service.findAll();
       expect(result).toHaveLength(2);
     });
@@ -121,14 +126,14 @@ describe('UserService', () => {
 
   describe('updateRole', () => {
     it('updates user role and returns updated user', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: '1' });
-      prisma.user.update.mockResolvedValue({ id: '1', role: Role.ADMIN });
+      mockUserRepo.findById.mockResolvedValue({ id: '1' });
+      mockUserRepo.update.mockResolvedValue({ id: '1', role: Role.ADMIN });
       const result = await service.updateRole('1', Role.ADMIN);
       expect(result).toHaveProperty('role', Role.ADMIN);
     });
 
     it('throws UserNotFoundException for non-existent user', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      mockUserRepo.findById.mockResolvedValue(null);
       await expect(service.updateRole('1', Role.ADMIN)).rejects.toThrow(
         AppException,
       );

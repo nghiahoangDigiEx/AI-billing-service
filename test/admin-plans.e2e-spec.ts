@@ -77,8 +77,9 @@ describe('Admin Plans API (e2e)', () => {
     await prisma.planPrice.deleteMany();
     await prisma.plan.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.$disconnect();
     await app.close();
+    // Let NestJS lifecycle handle Prisma disconnect, or do it after app close
+    await prisma.$disconnect();
   });
 
   describe('POST /admin/plans', () => {

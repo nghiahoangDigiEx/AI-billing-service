@@ -77,8 +77,9 @@ describe('Admin Addons API (e2e)', () => {
     await prisma.addonPurchase.deleteMany();
     await prisma.addonPackage.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.$disconnect();
     await app.close();
+    // Let NestJS lifecycle handle Prisma disconnect, or do it after app close
+    await prisma.$disconnect();
   });
 
   describe('POST /admin/addons', () => {

@@ -1,6 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '@/prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserUoW } from '../user.uow';
 import { User, Role, Provider } from '@prisma/client';
 import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
 import { AppException } from '@/common/exceptions';
@@ -11,21 +10,14 @@ export type UserWithoutPassword = Omit<User, 'password' | 'providerId'>;
 
 @Injectable()
 export class UserService {
-  constructor(
-    private prisma: PrismaService,
-    private eventEmitter: EventEmitter2,
-  ) {}
+  constructor(private readonly uow: UserUoW) {}
 
   async findByEmailWithPassword(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { email },
-    });
+    return this.uow.readOnly.user.findByEmail(email);
   }
 
   async findByProviderId(providerId: string): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { providerId },
-    });
+    return this.uow.readOnly.user.findByProviderId(providerId);
   }
 
   async updateUserProvider(
@@ -37,9 +29,8 @@ export class UserService {
       provider: Provider;
     },
   ): Promise<UserWithoutPassword> {
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data,
+    const user = await this.uow.execute(async (repos) => {
+      return repos.user.update(userId, data);
     });
     return this.excludePasswordFromUser(user);
   }
@@ -52,20 +43,18 @@ export class UserService {
     providerId?: string;
     avatar?: string;
   }): Promise<UserWithoutPassword> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email },
-    });
+    const user = await this.uow.execute(async (repos) => {
+      const existingUser = await repos.user.findByEmail(data.email);
 
-    if (existingUser) {
-      throw new AppException(
-        ErrorCode.CONFLICT,
-        'User already exists',
-        HttpStatus.CONFLICT,
-      );
-    }
+      if (existingUser) {
+        throw new AppException(
+          ErrorCode.CONFLICT,
+          'User already exists',
+          HttpStatus.CONFLICT,
+        );
+      }
 
-    const user = await this.prisma.user.create({
-      data: {
+      const newUser = await repos.user.create({
         email: data.email,
         password: data.password,
         name: data.name,
@@ -73,19 +62,21 @@ export class UserService {
         providerId: data.providerId,
         avatar: data.avatar,
         pendingStripeSetup: true,
-      },
-    });
+      });
 
-    this.eventEmitter.emit(USER_REGISTERED, {
-      userId: user.id,
-      email: user.email,
+      await repos.outbox.publish(USER_REGISTERED, {
+        userId: newUser.id,
+        email: newUser.email,
+      });
+
+      return newUser;
     });
 
     return this.excludePasswordFromUser(user);
   }
 
   async getProfile(userId: string): Promise<UserWithoutPassword> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.uow.readOnly.user.findById(userId);
     if (!user) {
       throw new AppException(
         ErrorCode.NOT_FOUND,
@@ -100,31 +91,29 @@ export class UserService {
     userId: string,
     updateProfileDto: UpdateProfileDto,
   ): Promise<UserWithoutPassword> {
-    const user = await this.prisma.user.update({
-      where: { id: userId },
-      data: updateProfileDto,
+    const user = await this.uow.execute(async (repos) => {
+      return repos.user.update(userId, updateProfileDto);
     });
     return this.excludePasswordFromUser(user);
   }
 
   async findAll(): Promise<UserWithoutPassword[]> {
-    const users = await this.prisma.user.findMany();
+    const users = await this.uow.readOnly.user.findAll();
     return users.map((user) => this.excludePasswordFromUser(user));
   }
 
   async updateRole(userId: string, role: Role): Promise<UserWithoutPassword> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new AppException(
-        ErrorCode.NOT_FOUND,
-        'User not found',
-        HttpStatus.NOT_FOUND,
-      );
-    }
+    const updatedUser = await this.uow.execute(async (repos) => {
+      const user = await repos.user.findById(userId);
+      if (!user) {
+        throw new AppException(
+          ErrorCode.NOT_FOUND,
+          'User not found',
+          HttpStatus.NOT_FOUND,
+        );
+      }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: { role },
+      return repos.user.update(userId, { role });
     });
     return this.excludePasswordFromUser(updatedUser);
   }
