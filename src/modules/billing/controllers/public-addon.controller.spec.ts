@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PublicAddonController } from './public-addon.controller';
-import { BillingService } from '../services/billing.service';
+import { PublicAddonController } from '@/modules/billing/controllers/public-addon.controller';
+import { BillingService } from '@/modules/billing/services/billing.service';
 
 describe('PublicAddonController', () => {
   let controller: PublicAddonController;

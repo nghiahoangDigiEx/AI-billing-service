@@ -5,8 +5,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ErrorCode } from '../../../common/enums/error-code.enum';
+import { PrismaService } from '@/prisma/prisma.service';
+import { ErrorCode } from '@/common/enums/error-code.enum';
 
 import { User, SubscriptionStatus } from '@prisma/client';
 

@@ -211,6 +211,15 @@ Verify subscription.status == ACTIVE and plan.slug == 'pro' before add-on purcha
 **Module Communication Is Event-Driven:**
 Modules never call each other's services directly. All cross-module communication via event bus.
 
+**Domain Events Are Persisted Atomically via Outbox:**
+Business writes and the corresponding domain event are committed in the same module-owned outbox table. Events are never emitted without the business write, and the business write is never considered complete without the outbox row.
+
+**At-Least-Once Event Delivery:**
+The outbox relay publishes events with retry and exponential backoff. Consumers must be idempotent; duplicate delivery is handled by consumer inbox and idempotency keys.
+
+**Webhook Acknowledgment Means Outbox Persisted:**
+The webhook endpoint returns 200 only after the domain event has been written to the outbox. Downstream credit provisioning is delivered asynchronously by the relay.
+
 **No Cross-Module Database Writes:**
 Module may read another module's tables but never write. Owning module is sole writer.
 
@@ -345,3 +354,34 @@ When making implementation decisions:
 - Reuse existing adapters and strategies before creating new ones
 - Follow NestJS conventions and idioms
 - When in doubt, ask for clarification before implementing
+
+---
+
+## Outbox Runbook
+
+### Dead-Letter Queue (DLQ) Replay
+
+When the outbox relay exhausts its retry budget for an event, it moves the event to `event_dlq` and emits an alert-level log. To replay after fixing the root cause (e.g., missing user row, data corruption):
+
+1. Identify the DLQ row:
+   ```sql
+   SELECT * FROM "EventDlq" ORDER BY "failedAt" DESC;
+   ```
+2. Fix the underlying data issue.
+3. Copy the event back into the outbox so the relay can redeliver it safely (consumer idempotency prevents duplicate side effects):
+   ```sql
+   INSERT INTO "BillingOutbox" ("id", "eventId", "type", "payload", "status", "attempts", "nextAttemptAt", "createdAt", "updatedAt")
+   SELECT gen_random_uuid(), "eventId", "type", "payload", 'PENDING', 0, now(), now(), now()
+   FROM "EventDlq"
+   WHERE "eventId" = '<event-id>';
+   ```
+4. Optionally delete the DLQ row once the outbox row is processed.
+
+A CLI script (`scripts/replay-outbox-dlq.ts`) should be added to automate copy, audit logging, and optional deletion.
+
+### Alerting Expectations
+
+- **DLQ log**: `Outbox event <id> (<type>) moved to DLQ after <n> attempt(s): <message>` — page/SRE ticket.
+- **Transient retry log**: `Outbox event <id> (<type>) transient failure (attempt <n>), retry at <time>` — warn, no page unless sustained.
+- **Kick failure log**: `Outbox kick failed: <message>` — warn; cron schedule is the fallback.
+- **Stale PENDING rows**: Monitored by the relay reclaim logic; sustained stale rows indicate the relay is not running.

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, WebhookEventStatus } from '@prisma/client';
-import { ParsedWebhookEvent } from '../../payment/interfaces/webhook-strategy.interface';
-import { StripeEventHandlerFactory } from '../factories/stripe-event-handler.factory';
+import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
+import { StripeEventHandlerFactory } from '@/modules/stripe/factories/stripe-event-handler.factory';
 
 @Injectable()
 export class StripeWebhookService {

@@ -1,4 +1,4 @@
-import { SubscriptionInterval } from '../enums/subscription-interval.enum';
+import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
 
 export interface PaymentProviderAdapter {
   createCustomer(email: string, name?: string): Promise<{ id: string }>;

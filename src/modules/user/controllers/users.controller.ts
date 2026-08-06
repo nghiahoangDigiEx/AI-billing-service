@@ -1,4 +1,4 @@
-import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
+import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Get,
@@ -14,14 +14,14 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { UserService } from '../services/user.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
-import { UpdateProfileDto } from '../dto/update-profile.dto';
-import { UpdateRoleDto } from '../dto/update-role.dto';
-import { UserResponseDto } from '../dto/user-response.dto';
+import { UserService } from '@/modules/user/services/user.service';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/modules/auth/guards/roles.guard';
+import { Roles } from '@/modules/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/modules/auth/decorators/current-user.decorator';
+import { UpdateProfileDto } from '@/modules/user/dto/update-profile.dto';
+import { UpdateRoleDto } from '@/modules/user/dto/update-role.dto';
+import { UserResponseDto } from '@/modules/user/dto/user-response.dto';
 import { Role } from '@prisma/client';
 
 @ApiTags('users')

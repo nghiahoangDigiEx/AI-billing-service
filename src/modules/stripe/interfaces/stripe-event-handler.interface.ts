@@ -1,4 +1,4 @@
-import { ParsedWebhookEvent } from '../../payment/interfaces/webhook-strategy.interface';
+import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
 
 export interface StripeEventHandler {
   handle(event: ParsedWebhookEvent): void | Promise<void>;

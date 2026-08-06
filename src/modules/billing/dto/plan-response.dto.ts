@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PlanStatus } from '@prisma/client';
-import { PlanPriceResponseDto } from './plan-price-response.dto';
+import { PlanPriceResponseDto } from '@/modules/billing/dto/plan-price-response.dto';
 
 export class PlanResponseDto {
   @ApiProperty()

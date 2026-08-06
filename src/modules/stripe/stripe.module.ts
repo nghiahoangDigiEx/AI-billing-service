@@ -1,19 +1,19 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from '../../prisma/prisma.module';
-import { PaymentModule } from '../payment/payment.module';
-import { StripeAdapter } from './adapters/stripe.adapter';
-import { StripeWebhookService } from './services/stripe-webhook.service';
-import { StripeWebhookController } from './controllers/stripe-webhook.controller';
-import { PaymentProviderFactory } from '../payment/factories/payment-provider.factory';
-import { WebhookStrategyFactory } from '../payment/factories/webhook-strategy.factory';
-import { PaymentProvider } from '../payment/enums/payment-provider.enum';
-import { StripeWebhookStrategy } from './strategies/stripe-webhook.strategy';
-import { StripeEventHandlerFactory } from './factories/stripe-event-handler.factory';
-import { InvoicePaidHandler } from './handlers/invoice-paid.handler';
-import { InvoicePaymentFailedHandler } from './handlers/invoice-payment-failed.handler';
-import { SubscriptionDeletedHandler } from './handlers/subscription-deleted.handler';
-import { PaymentIntentSucceededHandler } from './handlers/payment-intent-succeeded.handler';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { PaymentModule } from '@/modules/payment/payment.module';
+import { StripeAdapter } from '@/modules/stripe/adapters/stripe.adapter';
+import { StripeWebhookService } from '@/modules/stripe/services/stripe-webhook.service';
+import { StripeWebhookController } from '@/modules/stripe/controllers/stripe-webhook.controller';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { WebhookStrategyFactory } from '@/modules/payment/factories/webhook-strategy.factory';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
+import { StripeWebhookStrategy } from '@/modules/stripe/strategies/stripe-webhook.strategy';
+import { StripeEventHandlerFactory } from '@/modules/stripe/factories/stripe-event-handler.factory';
+import { InvoicePaidHandler } from '@/modules/stripe/handlers/invoice-paid.handler';
+import { InvoicePaymentFailedHandler } from '@/modules/stripe/handlers/invoice-payment-failed.handler';
+import { SubscriptionDeletedHandler } from '@/modules/stripe/handlers/subscription-deleted.handler';
+import { PaymentIntentSucceededHandler } from '@/modules/stripe/handlers/payment-intent-succeeded.handler';
 
 @Module({
   imports: [ConfigModule, PrismaModule, PaymentModule],

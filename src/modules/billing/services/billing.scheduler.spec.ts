@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BillingScheduler } from './billing.scheduler';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
-import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
+import { BillingScheduler } from '@/modules/billing/services/billing.scheduler';
+import { PrismaService } from '@/prisma/prisma.service';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 

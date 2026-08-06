@@ -1,4 +1,4 @@
-import { ApiStandardResponse } from '../../../common/decorators/api-standard-response.decorator';
+import { ApiStandardResponse } from '@/common/decorators/api-standard-response.decorator';
 import {
   Controller,
   Post,
@@ -18,13 +18,13 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
-import { BillingService } from '../services/billing.service';
-import { CreatePlanDto } from '../dto/create-plan.dto';
-import { UpdatePlanDto } from '../dto/update-plan.dto';
-import { CreatePlanPriceDto } from '../dto/create-plan-price.dto';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Roles } from '../../auth/decorators/roles.decorator';
+import { BillingService } from '@/modules/billing/services/billing.service';
+import { CreatePlanDto } from '@/modules/billing/dto/create-plan.dto';
+import { UpdatePlanDto } from '@/modules/billing/dto/update-plan.dto';
+import { CreatePlanPriceDto } from '@/modules/billing/dto/create-plan-price.dto';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/modules/auth/guards/roles.guard';
+import { Roles } from '@/modules/auth/decorators/roles.decorator';
 
 @ApiTags('Admin - Plans')
 @ApiBearerAuth()

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { WebhookStrategy } from '../interfaces/webhook-strategy.interface';
-import { PaymentProvider } from '../enums/payment-provider.enum';
+import { WebhookStrategy } from '@/modules/payment/interfaces/webhook-strategy.interface';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 
 @Injectable()
 export class WebhookStrategyFactory {

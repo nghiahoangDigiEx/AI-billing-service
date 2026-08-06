@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PaymentEvents } from '../../../events/payment.events';
-import type { SubscriptionDeletedEvent } from '../../../events/payment.events';
+import { PaymentEvents } from '@/events/payment.events';
+import type { SubscriptionDeletedEvent } from '@/events/payment.events';
 import { SubscriptionStatus } from '@prisma/client';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SUBSCRIPTION_DELETED } from '../../../events/event.constants';
+import { SUBSCRIPTION_DELETED } from '@/events/event.constants';
+import { createDomainEvent } from '@/events/domain-event';
+import type { SubscriptionDeletedPayload } from '@/events/payloads';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 @Injectable()
 export class SubscriptionDeletedListener {
@@ -13,7 +17,8 @@ export class SubscriptionDeletedListener {
 
   constructor(
     private prisma: PrismaService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly outboxWriter: BillingOutboxWriter,
+    private readonly relay: OutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.SUBSCRIPTION_DELETED)
@@ -33,7 +38,7 @@ export class SubscriptionDeletedListener {
     }
 
     const freePlan = await this.prisma.plan.findUnique({
-      where: { slug: 'free' },
+      where: { slug: PLAN_SLUGS.FREE },
       include: { prices: true },
     });
 
@@ -42,7 +47,6 @@ export class SubscriptionDeletedListener {
     }
     const freePlanPrice = freePlan.prices[0];
 
-    let newSubId!: string;
     const periodStart = new Date();
     const periodEnd = new Date(new Date().setMonth(new Date().getMonth() + 1));
 
@@ -66,15 +70,30 @@ export class SubscriptionDeletedListener {
         },
       });
 
-      newSubId = newSub.id;
+      const domainEvent = createDomainEvent<SubscriptionDeletedPayload>(
+        SUBSCRIPTION_DELETED,
+        {
+          userId: subscription.userId,
+          freePlanCredits: freePlan.creditsIncluded,
+          periodStart,
+          periodEnd,
+          sourceRef: newSub.id,
+        },
+        {
+          providerEventId: event.providerEventId,
+          causationId: event.providerEventId,
+          correlationId: event.providerEventId,
+        },
+        { id: event.providerEventId },
+      );
+
+      await this.outboxWriter.insert(tx, domainEvent);
     });
 
-    this.eventEmitter.emit(SUBSCRIPTION_DELETED, {
-      userId: subscription.userId,
-      freePlanCredits: freePlan.creditsIncluded,
-      periodStart,
-      periodEnd,
-      sourceRef: newSubId,
-    });
+    this.logger.log(
+      `Subscription ${subscription.id} cancelled and downgraded to free for user ${subscription.userId}`,
+    );
+
+    await this.relay.kick();
   }
 }

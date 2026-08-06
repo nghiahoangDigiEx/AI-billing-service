@@ -4,8 +4,8 @@ import Stripe from 'stripe';
 import {
   WebhookStrategy,
   ParsedWebhookEvent,
-} from '../../payment/interfaces/webhook-strategy.interface';
-import { CONFIG_KEYS } from '../../../common/constants/config.constants';
+} from '@/modules/payment/interfaces/webhook-strategy.interface';
+import { CONFIG_KEYS } from '@/common/constants/config.constants';
 
 @Injectable()
 export class StripeWebhookStrategy implements WebhookStrategy {

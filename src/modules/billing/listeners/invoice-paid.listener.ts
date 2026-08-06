@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { OnEvent } from '@nestjs/event-emitter';
-import { PaymentEvents } from '../../../events/payment.events';
-import type { InvoicePaidEvent } from '../../../events/payment.events';
+import { PaymentEvents } from '@/events/payment.events';
+import type { InvoicePaidEvent } from '@/events/payment.events';
 import { SubscriptionStatus } from '@prisma/client';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { INVOICE_PAID } from '../../../events/event.constants';
+import { INVOICE_PAID } from '@/events/event.constants';
+import { createDomainEvent } from '@/events/domain-event';
+import type { InvoicePaidPayload } from '@/events/payloads';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class InvoicePaidListener {
@@ -13,7 +16,8 @@ export class InvoicePaidListener {
 
   constructor(
     private prisma: PrismaService,
-    private eventEmitter: EventEmitter2,
+    private readonly outboxWriter: BillingOutboxWriter,
+    private readonly relay: OutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.INVOICE_PAID)
@@ -56,6 +60,26 @@ export class InvoicePaidListener {
       );
       return;
     }
+
+    const creditsIncluded = Number(planPrice.plan.creditsIncluded) || 0;
+
+    const domainEvent = createDomainEvent<InvoicePaidPayload>(
+      INVOICE_PAID,
+      {
+        userId: user.id,
+        creditsIncluded,
+        periodStart: event.periodStart,
+        periodEnd: event.periodEnd,
+        sourceRef: event.providerEventId,
+        planSlug: planPrice.plan.slug,
+      },
+      {
+        providerEventId: event.providerEventId,
+        causationId: event.providerEventId,
+        correlationId: event.providerEventId,
+      },
+      { id: event.providerEventId },
+    );
 
     await this.prisma.$transaction(async (tx) => {
       const activeSubscription = await tx.subscription.findFirst({
@@ -106,17 +130,10 @@ export class InvoicePaidListener {
           });
         }
       }
+
+      await this.outboxWriter.insert(tx, domainEvent);
     });
 
-    const creditsIncluded = Number(planPrice.plan.creditsIncluded) || 0;
-
-    this.eventEmitter.emit(INVOICE_PAID, {
-      userId: user.id,
-      creditsIncluded,
-      periodStart: event.periodStart,
-      periodEnd: event.periodEnd,
-      sourceRef: event.providerEventId,
-      planSlug: planPrice.plan.slug,
-    });
+    await this.relay.kick();
   }
 }

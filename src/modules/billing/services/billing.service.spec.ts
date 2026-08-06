@@ -1,17 +1,73 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppException } from '../../../common/exceptions';
-import { BillingService } from './billing.service';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { PaymentProviderFactory } from '../../payment/factories/payment-provider.factory';
-import { PaymentProviderAdapter } from '../../payment/interfaces/payment-provider-adapter.interface';
-import { PaymentProvider } from '../../payment/enums/payment-provider.enum';
-import { SubscriptionInterval } from '../../payment/enums/subscription-interval.enum';
+import { AppException } from '@/common/exceptions';
+import { BillingService } from '@/modules/billing/services/billing.service';
+import { BillingUoW } from '../billing.uow';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
+import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
 import { BillingInterval } from '@prisma/client';
-import { SortOrder } from '../../../common/enums/sort-order.enum';
 
 describe('BillingService', () => {
   let service: BillingService;
-  let prisma: PrismaService;
+
+  const mockPlanRepo = {
+    findBySlug: jest.fn(),
+    findByIdWithPrices: jest.fn(),
+    findById: jest.fn(),
+    create: jest.fn(),
+    findAllActive: jest.fn(),
+    update: jest.fn(),
+  };
+
+  const mockPlanPriceRepo = {
+    findFirstActive: jest.fn(),
+    findByIdAndPlanId: jest.fn(),
+    findById: jest.fn(),
+    countActivePrices: jest.fn(),
+    create: jest.fn(),
+    updateStatus: jest.fn(),
+  };
+
+  const mockCreditBalanceRepo = {
+    findUserAddonPurchases: jest.fn(),
+    findUserAddonHistory: jest.fn(),
+  };
+
+  const mockAddonPackageRepo = {
+    findById: jest.fn(),
+    findAllActive: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  };
+
+  const mockUserRepo = {
+    findById: jest.fn(),
+  };
+
+  const mockSubscriptionRepo = {
+    findCurrentActive: jest.fn(),
+    findHistory: jest.fn(),
+  };
+
+  const mockRepos = {
+    plan: mockPlanRepo,
+    planPrice: mockPlanPriceRepo,
+    creditBalance: mockCreditBalanceRepo,
+    addonPackage: mockAddonPackageRepo,
+    user: mockUserRepo,
+    subscription: mockSubscriptionRepo,
+  };
+
+  const mockBillingUoW = {
+    execute: jest
+      .fn()
+      .mockImplementation((cb: (repos: typeof mockRepos) => Promise<any>) =>
+        cb(mockRepos),
+      ),
+    readOnly: mockRepos,
+  };
+
   let paymentProviderFactory: PaymentProviderFactory;
   let paymentAdapter: PaymentProviderAdapter;
 
@@ -20,38 +76,8 @@ describe('BillingService', () => {
       providers: [
         BillingService,
         {
-          provide: PrismaService,
-          useValue: {
-            plan: {
-              findUnique: jest.fn(),
-              findMany: jest.fn(),
-              create: jest.fn(),
-              update: jest.fn(),
-            },
-            planPrice: {
-              findFirst: jest.fn(),
-              create: jest.fn(),
-              update: jest.fn(),
-              count: jest.fn(),
-              findUnique: jest.fn(),
-            },
-            creditBalance: {
-              findMany: jest.fn(),
-            },
-            addonPackage: {
-              findUnique: jest.fn(),
-              findMany: jest.fn(),
-              create: jest.fn(),
-              update: jest.fn(),
-            },
-            user: {
-              findUnique: jest.fn(),
-            },
-            subscription: {
-              findFirst: jest.fn(),
-              findMany: jest.fn(),
-            },
-          },
+          provide: BillingUoW,
+          useValue: mockBillingUoW,
         },
         {
           provide: PaymentProviderFactory,
@@ -70,7 +96,7 @@ describe('BillingService', () => {
     }).compile();
 
     service = module.get<BillingService>(BillingService);
-    prisma = module.get<PrismaService>(PrismaService);
+
     paymentProviderFactory = module.get<PaymentProviderFactory>(
       PaymentProviderFactory,
     );
@@ -99,21 +125,19 @@ describe('BillingService', () => {
         prices: [{ id: 'price_123', stripePriceId: 'price_123' }],
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findBySlug.mockResolvedValue(null);
       (paymentAdapter.createProduct as jest.Mock).mockResolvedValue(
         mockStripeProduct,
       );
       (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(
         mockStripePrice,
       );
-      (prisma.plan.create as jest.Mock).mockResolvedValue(mockPlan);
+      mockPlanRepo.create.mockResolvedValue(mockPlan);
 
       const result = await service.createPlan(createPlanDto);
 
       expect(result).toEqual(mockPlan);
-      expect(prisma.plan.findUnique).toHaveBeenCalledWith({
-        where: { slug: 'pro' },
-      });
+      expect(mockPlanRepo.findBySlug).toHaveBeenCalledWith('pro');
       expect(paymentAdapter.createProduct).toHaveBeenCalledWith('Pro Plan');
       expect(paymentAdapter.createPrice).toHaveBeenCalledWith(
         'prod_123',
@@ -121,7 +145,7 @@ describe('BillingService', () => {
         'usd',
         SubscriptionInterval.MONTH,
       );
-      expect(prisma.plan.create).toHaveBeenCalled();
+      expect(mockPlanRepo.create).toHaveBeenCalled();
     });
 
     it('should throw AppException if slug already exists', async () => {
@@ -135,9 +159,7 @@ describe('BillingService', () => {
         currency: 'usd',
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue({
-        id: 'existing',
-      });
+      mockPlanRepo.findBySlug.mockResolvedValue({});
 
       await expect(service.createPlan(createPlanDto)).rejects.toThrow(
         AppException,
@@ -157,19 +179,12 @@ describe('BillingService', () => {
         },
       ];
 
-      (prisma.plan.findMany as jest.Mock).mockResolvedValue(mockPlans);
+      mockPlanRepo.findAllActive.mockResolvedValue(mockPlans);
 
       const result = await service.getAllPlans();
 
       expect(result).toEqual(mockPlans);
-      expect(prisma.plan.findMany).toHaveBeenCalledWith({
-        where: { status: 'ACTIVE' },
-        include: {
-          prices: {
-            where: { status: 'ACTIVE' },
-          },
-        },
-      });
+      expect(mockPlanRepo.findAllActive).toHaveBeenCalledWith();
     });
   });
 
@@ -181,19 +196,16 @@ describe('BillingService', () => {
         prices: [{ id: 'price_123' }],
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
+      mockPlanRepo.findByIdWithPrices.mockResolvedValue(mockPlan);
 
       const result = await service.getPlanById('plan_123');
 
       expect(result).toEqual(mockPlan);
-      expect(prisma.plan.findUnique).toHaveBeenCalledWith({
-        where: { id: 'plan_123' },
-        include: { prices: true },
-      });
+      expect(mockPlanRepo.findByIdWithPrices).toHaveBeenCalledWith('plan_123');
     });
 
     it('should throw AppException if plan not found', async () => {
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findByIdWithPrices.mockResolvedValue(null);
 
       await expect(service.getPlanById('nonexistent')).rejects.toThrow(
         AppException,
@@ -214,9 +226,9 @@ describe('BillingService', () => {
         prices: [],
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
       (paymentAdapter.updateProduct as jest.Mock).mockResolvedValue({});
-      (prisma.plan.update as jest.Mock).mockResolvedValue(updatedPlan);
+      mockPlanRepo.update.mockResolvedValue(updatedPlan);
 
       const result = await service.updatePlan('plan_123', { name: 'New Name' });
 
@@ -225,15 +237,13 @@ describe('BillingService', () => {
         'prod_123',
         'New Name',
       );
-      expect(prisma.plan.update).toHaveBeenCalledWith({
-        where: { id: 'plan_123' },
-        data: { name: 'New Name' },
-        include: { prices: true },
+      expect(mockPlanRepo.update).toHaveBeenCalledWith('plan_123', {
+        name: 'New Name',
       });
     });
 
     it('should throw AppException if plan not found', async () => {
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findById.mockResolvedValue(null);
 
       await expect(
         service.updatePlan('nonexistent', { name: 'New' }),
@@ -257,12 +267,12 @@ describe('BillingService', () => {
         currency: 'usd',
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
+      mockPlanPriceRepo.findFirstActive.mockResolvedValue(null);
       (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(
         mockStripePrice,
       );
-      (prisma.planPrice.create as jest.Mock).mockResolvedValue(mockPrice);
+      mockPlanPriceRepo.create.mockResolvedValue(mockPrice);
 
       const result = await service.addPriceToPlan('plan_123', {
         billingInterval: 'YEAR',
@@ -271,28 +281,22 @@ describe('BillingService', () => {
       });
 
       expect(result).toEqual(mockPrice);
-      expect(prisma.plan.findUnique).toHaveBeenCalledWith({
-        where: { id: 'plan_123' },
-      });
-      expect(prisma.planPrice.findFirst).toHaveBeenCalledWith({
-        where: {
-          planId: 'plan_123',
-
-          billingInterval: BillingInterval.YEAR,
-          status: 'ACTIVE',
-        },
-      });
+      expect(mockPlanRepo.findById).toHaveBeenCalledWith('plan_123');
+      expect(mockPlanPriceRepo.findFirstActive).toHaveBeenCalledWith(
+        'plan_123',
+        BillingInterval.YEAR,
+      );
       expect(paymentAdapter.createPrice).toHaveBeenCalledWith(
         'prod_123',
         10000,
         'usd',
         SubscriptionInterval.YEAR,
       );
-      expect(prisma.planPrice.create).toHaveBeenCalled();
+      expect(mockPlanPriceRepo.create).toHaveBeenCalled();
     });
 
     it('should throw AppException if plan not found', async () => {
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findById.mockResolvedValue(null);
 
       await expect(
         service.addPriceToPlan('nonexistent', {
@@ -307,10 +311,8 @@ describe('BillingService', () => {
       const mockPlan = { id: 'plan_123' };
       const existingPrice = { id: 'existing_price' };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(
-        existingPrice,
-      );
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
+      mockPlanPriceRepo.findFirstActive.mockResolvedValue(existingPrice);
 
       await expect(
         service.addPriceToPlan('plan_123', {
@@ -332,31 +334,30 @@ describe('BillingService', () => {
       };
       const updatedPrice = { ...mockPrice, status: 'INACTIVE' };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(mockPrice);
-      (prisma.planPrice.count as jest.Mock).mockResolvedValue(2);
-      (prisma.planPrice.update as jest.Mock).mockResolvedValue(updatedPrice);
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
+      mockPlanPriceRepo.findByIdAndPlanId.mockResolvedValue(mockPrice);
+      mockPlanPriceRepo.countActivePrices.mockResolvedValue(2);
+      mockPlanPriceRepo.updateStatus.mockResolvedValue(updatedPrice);
 
       const result = await service.deactivatePlanPrice('plan_123', 'price_123');
 
       expect(result).toEqual(updatedPrice);
-      expect(prisma.plan.findUnique).toHaveBeenCalledWith({
-        where: { id: 'plan_123' },
-      });
-      expect(prisma.planPrice.findFirst).toHaveBeenCalledWith({
-        where: { id: 'price_123', planId: 'plan_123' },
-      });
-      expect(prisma.planPrice.count).toHaveBeenCalledWith({
-        where: { planId: 'plan_123', status: 'ACTIVE' },
-      });
-      expect(prisma.planPrice.update).toHaveBeenCalledWith({
-        where: { id: 'price_123' },
-        data: { status: 'INACTIVE' },
-      });
+      expect(mockPlanRepo.findById).toHaveBeenCalledWith('plan_123');
+      expect(mockPlanPriceRepo.findByIdAndPlanId).toHaveBeenCalledWith(
+        'price_123',
+        'plan_123',
+      );
+      expect(mockPlanPriceRepo.countActivePrices).toHaveBeenCalledWith(
+        'plan_123',
+      );
+      expect(mockPlanPriceRepo.updateStatus).toHaveBeenCalledWith(
+        'price_123',
+        'INACTIVE',
+      );
     });
 
     it('should throw AppException if plan not found', async () => {
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findById.mockResolvedValue(null);
 
       await expect(
         service.deactivatePlanPrice('nonexistent', 'price_123'),
@@ -366,8 +367,8 @@ describe('BillingService', () => {
     it('should throw AppException if price not found', async () => {
       const mockPlan = { id: 'plan_123' };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(null);
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
+      mockPlanPriceRepo.findByIdAndPlanId.mockResolvedValue(null);
 
       await expect(
         service.deactivatePlanPrice('plan_123', 'nonexistent'),
@@ -382,9 +383,9 @@ describe('BillingService', () => {
         status: 'ACTIVE',
       };
 
-      (prisma.plan.findUnique as jest.Mock).mockResolvedValue(mockPlan);
-      (prisma.planPrice.findFirst as jest.Mock).mockResolvedValue(mockPrice);
-      (prisma.planPrice.count as jest.Mock).mockResolvedValue(1);
+      mockPlanRepo.findById.mockResolvedValue(mockPlan);
+      mockPlanPriceRepo.findByIdAndPlanId.mockResolvedValue(mockPrice);
+      mockPlanPriceRepo.countActivePrices.mockResolvedValue(1);
 
       await expect(
         service.deactivatePlanPrice('plan_123', 'price_123'),
@@ -407,7 +408,7 @@ describe('BillingService', () => {
         mockProduct,
       );
       (paymentAdapter.createPrice as jest.Mock).mockResolvedValue(mockPrice);
-      (prisma.addonPackage.create as jest.Mock).mockResolvedValue(mockAddon);
+      mockAddonPackageRepo.create.mockResolvedValue(mockAddon);
 
       const result = await service.createAddonPackage(dto);
 
@@ -418,30 +419,26 @@ describe('BillingService', () => {
         1000,
         'usd',
       );
-      expect(prisma.addonPackage.create).toHaveBeenCalled();
+      expect(mockAddonPackageRepo.create).toHaveBeenCalled();
     });
   });
 
   describe('getAllAddonPackages', () => {
     it('should return active addon packages', async () => {
       const mockAddons = [{ id: 'addon_1' }];
-      (prisma.addonPackage.findMany as jest.Mock).mockResolvedValue(mockAddons);
+      mockAddonPackageRepo.findAllActive.mockResolvedValue(mockAddons);
 
       const result = await service.getAllAddonPackages();
 
       expect(result).toEqual(mockAddons);
-      expect(prisma.addonPackage.findMany).toHaveBeenCalledWith({
-        where: { status: 'ACTIVE' },
-      });
+      expect(mockAddonPackageRepo.findAllActive).toHaveBeenCalledWith();
     });
   });
 
   describe('getAddonPackageById', () => {
     it('should return addon package by id', async () => {
       const mockAddon = { id: 'addon_1' };
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
+      mockAddonPackageRepo.findById.mockResolvedValue(mockAddon);
 
       const result = await service.getAddonPackageById('addon_1');
 
@@ -449,7 +446,7 @@ describe('BillingService', () => {
     });
 
     it('should throw AppException if not found', async () => {
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
+      mockAddonPackageRepo.findById.mockResolvedValue(null);
       await expect(service.getAddonPackageById('missing')).rejects.toThrow(
         AppException,
       );
@@ -461,11 +458,9 @@ describe('BillingService', () => {
       const mockAddon = { id: 'addon_1', stripeProductId: 'prod_addon' };
       const updated = { ...mockAddon, name: 'New Name' };
 
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
+      mockAddonPackageRepo.findById.mockResolvedValue(mockAddon);
       (paymentAdapter.updateProduct as jest.Mock).mockResolvedValue({});
-      (prisma.addonPackage.update as jest.Mock).mockResolvedValue(updated);
+      mockAddonPackageRepo.update.mockResolvedValue(updated);
 
       const result = await service.updateAddonPackage('addon_1', {
         name: 'New Name',
@@ -476,11 +471,11 @@ describe('BillingService', () => {
         'prod_addon',
         'New Name',
       );
-      expect(prisma.addonPackage.update).toHaveBeenCalled();
+      expect(mockAddonPackageRepo.update).toHaveBeenCalled();
     });
 
     it('should throw AppException if not found', async () => {
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
+      mockAddonPackageRepo.findById.mockResolvedValue(null);
       await expect(
         service.updateAddonPackage('missing', { name: 'New Name' }),
       ).rejects.toThrow(AppException);
@@ -492,24 +487,21 @@ describe('BillingService', () => {
       const mockAddon = { id: 'addon_1', stripeProductId: 'prod_addon' };
       const updated = { ...mockAddon, status: 'INACTIVE' };
 
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
+      mockAddonPackageRepo.findById.mockResolvedValue(mockAddon);
       (paymentAdapter.archiveProduct as jest.Mock).mockResolvedValue({});
-      (prisma.addonPackage.update as jest.Mock).mockResolvedValue(updated);
+      mockAddonPackageRepo.update.mockResolvedValue(updated);
 
       const result = await service.deactivateAddonPackage('addon_1');
 
       expect(result).toEqual(updated);
       expect(paymentAdapter.archiveProduct).toHaveBeenCalledWith('prod_addon');
-      expect(prisma.addonPackage.update).toHaveBeenCalledWith({
-        where: { id: 'addon_1' },
-        data: { status: 'INACTIVE' },
+      expect(mockAddonPackageRepo.update).toHaveBeenCalledWith('addon_1', {
+        status: 'INACTIVE',
       });
     });
 
     it('should throw AppException if not found', async () => {
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(null);
+      mockAddonPackageRepo.findById.mockResolvedValue(null);
       await expect(service.deactivateAddonPackage('missing')).rejects.toThrow(
         AppException,
       );
@@ -522,8 +514,8 @@ describe('BillingService', () => {
       const mockPrice = { id: 'price_1', stripePriceId: 'stripe_price_123' };
       const mockSub = { id: 'sub_123' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.planPrice.findUnique as jest.Mock).mockResolvedValue(mockPrice);
+      mockUserRepo.findById.mockResolvedValue(mockUser);
+      mockPlanPriceRepo.findById.mockResolvedValue(mockPrice);
       (paymentAdapter.createSubscription as jest.Mock).mockResolvedValue(
         mockSub,
       );
@@ -544,8 +536,8 @@ describe('BillingService', () => {
       const mockUser = { id: 'user_1', stripeCustomerId: null };
       const mockPrice = { id: 'price_1' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.planPrice.findUnique as jest.Mock).mockResolvedValue(mockPrice);
+      mockUserRepo.findById.mockResolvedValue(mockUser);
+      mockPlanPriceRepo.findById.mockResolvedValue(mockPrice);
 
       await expect(
         service.upgradeSubscription('user_1', 'price_1'),
@@ -556,19 +548,18 @@ describe('BillingService', () => {
   describe('getCurrentSubscription', () => {
     it('should return current active subscription', async () => {
       const mockSub = { id: 'sub_1' };
-      (prisma.subscription.findFirst as jest.Mock).mockResolvedValue(mockSub);
+      mockSubscriptionRepo.findCurrentActive.mockResolvedValue(mockSub);
 
       const result = await service.getCurrentSubscription('user_1');
 
       expect(result).toEqual(mockSub);
-      expect(prisma.subscription.findFirst).toHaveBeenCalledWith({
-        where: { userId: 'user_1', status: 'ACTIVE' },
-        include: { plan: true, planPrice: true },
-      });
+      expect(mockSubscriptionRepo.findCurrentActive).toHaveBeenCalledWith(
+        'user_1',
+      );
     });
 
     it('should throw AppException if no active subscription', async () => {
-      (prisma.subscription.findFirst as jest.Mock).mockResolvedValue(null);
+      mockSubscriptionRepo.findCurrentActive.mockResolvedValue(null);
       await expect(service.getCurrentSubscription('user_1')).rejects.toThrow(
         AppException,
       );
@@ -578,16 +569,12 @@ describe('BillingService', () => {
   describe('getSubscriptionHistory', () => {
     it('should return subscription history', async () => {
       const mockSubs = [{ id: 'sub_1' }];
-      (prisma.subscription.findMany as jest.Mock).mockResolvedValue(mockSubs);
+      mockSubscriptionRepo.findHistory.mockResolvedValue(mockSubs);
 
       const result = await service.getSubscriptionHistory('user_1');
 
       expect(result).toEqual(mockSubs);
-      expect(prisma.subscription.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user_1' },
-        include: { plan: true, planPrice: true },
-        orderBy: { createdAt: SortOrder.DESC },
-      });
+      expect(mockSubscriptionRepo.findHistory).toHaveBeenCalledWith('user_1');
     });
   });
 
@@ -602,10 +589,8 @@ describe('BillingService', () => {
       };
       const mockPaymentIntent = { id: 'pi_123', clientSecret: 'secret_123' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
+      mockUserRepo.findById.mockResolvedValue(mockUser);
+      mockAddonPackageRepo.findById.mockResolvedValue(mockAddon);
       (paymentAdapter.createPaymentIntent as jest.Mock).mockResolvedValue(
         mockPaymentIntent,
       );
@@ -629,10 +614,8 @@ describe('BillingService', () => {
       const mockUser = { id: 'user_1', stripeCustomerId: 'cus_123' };
       const mockAddon = { id: 'addon_1', status: 'INACTIVE' };
 
-      (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      (prisma.addonPackage.findUnique as jest.Mock).mockResolvedValue(
-        mockAddon,
-      );
+      mockUserRepo.findById.mockResolvedValue(mockUser);
+      mockAddonPackageRepo.findById.mockResolvedValue(mockAddon);
 
       await expect(service.purchaseAddon('user_1', 'addon_1')).rejects.toThrow(
         AppException,
@@ -643,41 +626,32 @@ describe('BillingService', () => {
   describe('getUserAddonPurchases', () => {
     it('should return active and frozen addon purchases', async () => {
       const mockBalances = [{ id: 'balance_1' }];
-      (prisma.creditBalance.findMany as jest.Mock).mockResolvedValue(
+      mockCreditBalanceRepo.findUserAddonPurchases.mockResolvedValue(
         mockBalances,
       );
 
       const result = await service.getUserAddonPurchases('user_1');
 
       expect(result).toEqual(mockBalances);
-      expect(prisma.creditBalance.findMany).toHaveBeenCalledWith({
-        where: {
-          userId: 'user_1',
-          source: 'ADDON',
-          status: { in: ['ACTIVE', 'FROZEN'] },
-        },
-        orderBy: { createdAt: SortOrder.DESC },
-      });
+      expect(mockCreditBalanceRepo.findUserAddonPurchases).toHaveBeenCalledWith(
+        'user_1',
+      );
     });
   });
 
   describe('getUserAddonHistory', () => {
     it('should return all addon history', async () => {
       const mockBalances = [{ id: 'balance_1' }];
-      (prisma.creditBalance.findMany as jest.Mock).mockResolvedValue(
+      mockCreditBalanceRepo.findUserAddonHistory.mockResolvedValue(
         mockBalances,
       );
 
       const result = await service.getUserAddonHistory('user_1');
 
       expect(result).toEqual(mockBalances);
-      expect(prisma.creditBalance.findMany).toHaveBeenCalledWith({
-        where: {
-          userId: 'user_1',
-          source: 'ADDON',
-        },
-        orderBy: { createdAt: SortOrder.DESC },
-      });
+      expect(mockCreditBalanceRepo.findUserAddonHistory).toHaveBeenCalledWith(
+        'user_1',
+      );
     });
   });
 });

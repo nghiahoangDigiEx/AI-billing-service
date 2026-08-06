@@ -2,9 +2,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 const request = require('supertest');
-import { AppModule } from './../src/app.module';
-import { PrismaService } from './../src/prisma/prisma.service';
-import { PaymentProviderFactory } from './../src/modules/payment/factories/payment-provider.factory';
+import { AppModule } from '@/app.module';
+import { PrismaService } from '@/prisma/prisma.service';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
 import { Role } from '@prisma/client';
 
 jest.setTimeout(30000);
@@ -26,6 +26,7 @@ describe('Admin Addons API (e2e)', () => {
     };
     mockPaymentProviderFactory = {
       getAdapter: jest.fn().mockReturnValue(mockAdapter),
+      registerAdapter: jest.fn(),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -76,8 +77,9 @@ describe('Admin Addons API (e2e)', () => {
     await prisma.addonPurchase.deleteMany();
     await prisma.addonPackage.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.$disconnect();
     await app.close();
+    // Let NestJS lifecycle handle Prisma disconnect, or do it after app close
+    await prisma.$disconnect();
   });
 
   describe('POST /admin/addons', () => {

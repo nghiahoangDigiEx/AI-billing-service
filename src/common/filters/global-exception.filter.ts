@@ -7,9 +7,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { ErrorCode } from '../enums';
-import { AppException } from '../exceptions';
-import { ApiResponse } from '../interfaces';
+import { ErrorCode } from '@/common/enums';
+import { AppException } from '@/common/exceptions';
+import { ApiResponse } from '@/common/interfaces';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

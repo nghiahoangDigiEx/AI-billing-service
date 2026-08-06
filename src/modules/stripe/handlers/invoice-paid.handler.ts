@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { StripeEventHandler } from '../interfaces/stripe-event-handler.interface';
-import { ParsedWebhookEvent } from '../../payment/interfaces/webhook-strategy.interface';
-import { PaymentEvents } from '../../../events/payment.events';
+import { StripeEventHandler } from '@/modules/stripe/interfaces/stripe-event-handler.interface';
+import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
+import { PaymentEvents } from '@/events/payment.events';
 import Stripe from 'stripe';
 
 @Injectable()
 export class InvoicePaidHandler implements StripeEventHandler {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
-  handle(event: ParsedWebhookEvent): void {
+  async handle(event: ParsedWebhookEvent): Promise<void> {
     const invoicePaid = event.data as Stripe.Invoice & {
       subscription?: string;
     };
@@ -21,7 +21,7 @@ export class InvoicePaidHandler implements StripeEventHandler {
         ? lineItem.price
         : lineItem?.price?.id;
 
-    this.eventEmitter.emit(PaymentEvents.INVOICE_PAID, {
+    await this.eventEmitter.emitAsync(PaymentEvents.INVOICE_PAID, {
       providerEventId: event.id,
       subscriptionId: invoicePaid.subscription as string,
       customerId:

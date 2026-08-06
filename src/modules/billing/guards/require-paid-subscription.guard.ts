@@ -5,9 +5,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../../prisma/prisma.service';
-import { ErrorCode } from '../../../common/enums/error-code.enum';
-import { PLAN_SLUGS } from '../constants/billing.constants';
+import { PrismaService } from '@/prisma/prisma.service';
+import { ErrorCode } from '@/common/enums/error-code.enum';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 import { User, SubscriptionStatus } from '@prisma/client';
 

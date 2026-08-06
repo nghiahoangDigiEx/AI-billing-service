@@ -1,7 +1,7 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RequireActiveSubscriptionGuard } from './require-active-subscription.guard';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { RequireActiveSubscriptionGuard } from '@/modules/billing/guards/require-active-subscription.guard';
+import { PrismaService } from '@/prisma/prisma.service';
 import { SubscriptionStatus } from '@prisma/client';
 
 describe('RequireActiveSubscriptionGuard', () => {

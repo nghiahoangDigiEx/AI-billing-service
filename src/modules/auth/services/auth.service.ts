@@ -1,17 +1,17 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import {
   UserService,
   UserWithoutPassword,
-} from '../../user/services/user.service';
+} from '@/modules/user/services/user.service';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { Provider, User } from '@prisma/client';
-import { RegisterDto } from '../dto/register.dto';
-import { LoginDto } from '../dto/login.dto';
-import { AppException } from '../../../common/exceptions';
-import { ErrorCode } from '../../../common/enums';
+import { RegisterDto } from '@/modules/auth/dto/register.dto';
+import { LoginDto } from '@/modules/auth/dto/login.dto';
+import { AppException } from '@/common/exceptions';
+import { ErrorCode } from '@/common/enums';
 
 @Injectable()
 export class AuthService {

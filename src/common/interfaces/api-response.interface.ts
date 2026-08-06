@@ -1,4 +1,4 @@
-import { ErrorCode } from '../enums';
+import { ErrorCode } from '@/common/enums';
 
 export interface ApiResponse<T = any> {
   success: boolean;
