@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BillingOutboxStatus, Prisma } from '@prisma/client';
+import { OutboxStatus, Prisma } from '@prisma/client';
 import { BillingOutboxWriter } from './billing-outbox-writer.service';
 import { createDomainEvent } from '@/events/domain-event';
 import { INVOICE_PAID } from '@/events/event.constants';
@@ -46,7 +46,7 @@ describe('BillingOutboxWriter', () => {
 
     expect(input.eventId).toBe('event_123');
     expect(input.type).toBe(INVOICE_PAID);
-    expect(input.status).toBe(BillingOutboxStatus.PENDING);
+    expect(input.status).toBe(OutboxStatus.PENDING);
     expect(input.attempts).toBe(0);
     expect(input.payload).toEqual(
       expect.objectContaining({
@@ -83,7 +83,7 @@ describe('BillingOutboxWriter', () => {
       data: expect.objectContaining({
         eventId: 'event_123',
         type: INVOICE_PAID,
-        status: BillingOutboxStatus.PENDING,
+        status: OutboxStatus.PENDING,
       }),
     });
   });

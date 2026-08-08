@@ -8,7 +8,7 @@ import { SUBSCRIPTION_DELETED } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
 import type { SubscriptionDeletedPayload } from '@/events/payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
-import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class SubscriptionDeletedListener {
   constructor(
     private prisma: PrismaService,
     private readonly outboxWriter: BillingOutboxWriter,
-    private readonly relay: OutboxRelay,
+    private readonly relay: BillingOutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.SUBSCRIPTION_DELETED)

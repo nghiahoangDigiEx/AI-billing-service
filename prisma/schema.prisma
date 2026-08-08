@@ -60,7 +60,7 @@ enum WebhookEventStatus {
   UNHANDLED
 }
 
-enum BillingOutboxStatus {
+enum OutboxStatus {
   PENDING
   PROCESSED
   DEAD_LETTERED
@@ -225,7 +225,24 @@ model BillingOutbox {
   eventId       String             @unique
   type          String
   payload       Json
-  status        BillingOutboxStatus @default(PENDING)
+  status        OutboxStatus       @default(PENDING)
+  attempts      Int                @default(0)
+  nextAttemptAt DateTime           @default(now())
+  lockedAt      DateTime?
+  errorMessage  String?
+  processedAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+model UserOutbox {
+  id            String             @id @default(uuid())
+  eventId       String             @unique
+  type          String
+  payload       Json
+  status        OutboxStatus       @default(PENDING)
   attempts      Int                @default(0)
   nextAttemptAt DateTime           @default(now())
   lockedAt      DateTime?

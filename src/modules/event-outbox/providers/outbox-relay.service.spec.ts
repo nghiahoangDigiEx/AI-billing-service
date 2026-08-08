@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
-import { BillingOutboxStatus, Prisma } from '@prisma/client';
-import { OutboxRelay } from './outbox-relay.service';
+import { OutboxStatus, Prisma } from '@prisma/client';
+import { BillingOutboxRelay } from './outbox-relay.service';
 import {
   EVENT_PUBLISHER,
   type EventPublisher,
@@ -26,8 +26,8 @@ const makeEvent = (id = 'event_123'): ReturnType<typeof createDomainEvent> =>
     { id },
   );
 
-describe('OutboxRelay', () => {
-  let relay: OutboxRelay;
+describe('BillingOutboxRelay', () => {
+  let relay: BillingOutboxRelay;
   let mockPrisma: {
     $queryRaw: jest.Mock;
     $transaction: jest.Mock;
@@ -62,7 +62,7 @@ describe('OutboxRelay', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        OutboxRelay,
+        BillingOutboxRelay,
         {
           provide: PrismaService,
           useValue: mockPrisma,
@@ -80,7 +80,7 @@ describe('OutboxRelay', () => {
       ],
     }).compile();
 
-    relay = module.get<OutboxRelay>(OutboxRelay);
+    relay = module.get<BillingOutboxRelay>(BillingOutboxRelay);
   });
 
   describe('claimPendingEvents', () => {
@@ -124,7 +124,7 @@ describe('OutboxRelay', () => {
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
         where: { id: 'outbox_1' },
         data: expect.objectContaining({
-          status: BillingOutboxStatus.PROCESSED,
+          status: OutboxStatus.PROCESSED,
           lockedAt: null,
           errorMessage: null,
         }),
@@ -149,7 +149,7 @@ describe('OutboxRelay', () => {
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
         where: { id: 'outbox_1' },
         data: expect.objectContaining({
-          status: BillingOutboxStatus.PROCESSED,
+          status: OutboxStatus.PROCESSED,
         }),
       });
       expect(mockPrisma.eventDlq.create).not.toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe('OutboxRelay', () => {
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
         where: { id: 'outbox_1' },
         data: expect.objectContaining({
-          status: BillingOutboxStatus.PENDING,
+          status: OutboxStatus.PENDING,
           lockedAt: null,
           errorMessage: 'Timeout',
           nextAttemptAt: expect.any(Date),
@@ -214,7 +214,7 @@ describe('OutboxRelay', () => {
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
         where: { id: 'outbox_1' },
         data: expect.objectContaining({
-          status: BillingOutboxStatus.DEAD_LETTERED,
+          status: OutboxStatus.DEAD_LETTERED,
           lockedAt: null,
           errorMessage: 'Foreign key violation',
         }),
@@ -240,7 +240,7 @@ describe('OutboxRelay', () => {
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
         where: { id: 'outbox_1' },
         data: expect.objectContaining({
-          status: BillingOutboxStatus.DEAD_LETTERED,
+          status: OutboxStatus.DEAD_LETTERED,
         }),
       });
     });
@@ -277,7 +277,7 @@ describe('OutboxRelay', () => {
 
       expect(mockPrisma.billingOutbox.deleteMany).toHaveBeenCalledWith({
         where: expect.objectContaining({
-          status: BillingOutboxStatus.PROCESSED,
+          status: OutboxStatus.PROCESSED,
           processedAt: expect.objectContaining({ lt: expect.any(Date) }),
         }),
       });

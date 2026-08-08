@@ -8,7 +8,7 @@ import { SUBSCRIPTION_PAYMENT_FAILED } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
 import type { SubscriptionPaymentFailedPayload } from '@/events/payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
-import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class InvoicePaymentFailedListener {
@@ -17,7 +17,7 @@ export class InvoicePaymentFailedListener {
   constructor(
     private prisma: PrismaService,
     private readonly outboxWriter: BillingOutboxWriter,
-    private readonly relay: OutboxRelay,
+    private readonly relay: BillingOutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.INVOICE_PAYMENT_FAILED)
