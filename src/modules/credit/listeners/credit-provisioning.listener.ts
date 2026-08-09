@@ -108,7 +108,7 @@ export class CreditProvisioningListener {
       userId: payload.userId,
       creditsIncluded: payload.freePlanCredits,
       periodStart: new Date(),
-      periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)), // Rough estimate, webhook corrects this
+      periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       sourceRef: payload.newSubscriptionId,
       planSlug: PLAN_SLUGS.FREE,
     });

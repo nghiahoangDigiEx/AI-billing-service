@@ -257,8 +257,8 @@
 
 ## 20. Seed Data
 
-- [ ] 20.1 Update seed script to create Free plan with monthly price (if not exists)
-- [ ] 20.2 Update seed script to create Pro plan with monthly and annual prices (if not exists)
-- [ ] 20.3 Update seed script to create sample add-on packages (if not exists)
-- [ ] 20.4 Ensure seed script is idempotent (can run multiple times without errors)
-- [ ] 20.5 Test seed script execution
+- [x] 20.1 Update seed script to create Free plan with monthly price (if not exists)
+- [x] 20.2 Update seed script to create Pro plan with monthly and annual prices (if not exists)
+- [x] 20.3 Update seed script to create sample add-on packages (if not exists)
+- [x] 20.4 Ensure seed script is idempotent (can run multiple times without errors)
+- [x] 20.5 Test seed script execution

@@ -12,6 +12,7 @@ import { CreditModule } from '@/modules/credit/credit.module';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { LoggerModule } from '@/common/logger/logger.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { LoggerModule } from '@/common/logger/logger.module';
     BillingModule,
     StripeModule,
     CreditModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [],
   providers: [
