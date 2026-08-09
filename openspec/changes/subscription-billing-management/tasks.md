@@ -180,13 +180,13 @@
 
 ## 14. User Registration Integration
 
-- [ ] 14.1 Update user.service.ts register() and validateOAuthUser() to set pendingStripeSetup=true upon user creation
-- [ ] 14.2 Create user.listener.ts in billing module to listen for USER_REGISTERED event
-- [ ] 14.3 Implement handleUserRegistered() to create Stripe customer and insert Subscription record for Free plan
-- [ ] 14.4 On success, emit stripe.setup.success event from Billing module
-- [ ] 14.5 On failure, error is logged and background job (Section 13) will handle retries since pendingStripeSetup remains true
-- [ ] 14.6 Create billing.listener.ts in user module to listen for stripe.setup.success
-- [ ] 14.7 Implement handleStripeSetupSuccess() in user module to update user record (pendingStripeSetup=false, set stripeCustomerId)
+- [x] 14.1 Update user.service.ts register() and validateOAuthUser() to set pendingStripeSetup=true upon user creation
+- [x] 14.2 Create user.listener.ts in billing module to listen for USER_REGISTERED event
+- [x] 14.3 Implement handleUserRegistered() to create Stripe customer and insert Subscription record for Free plan
+- [x] 14.4 On success, write `stripe.setup.success` event to Outbox within the `BillingUoW` transaction
+- [x] 14.5 On failure, error is logged and background job (Section 13) will handle retries since pendingStripeSetup remains true
+- [x] 14.6 Create billing.listener.ts in user module to listen for stripe.setup.success
+- [x] 14.7 Implement handleStripeSetupSuccess() in user module to update user record (pendingStripeSetup=false, set stripeCustomerId)
 - [ ] 14.8 Update user registration tests and billing listener tests
 
 ## 15. Add-on Freeze/Unfreeze Logic
@@ -195,34 +195,35 @@
 - [ ] 15.2 Implement unfreezeAddons() method in billing.service.ts (update CreditBalance where source=ADDON AND status=FROZEN to ACTIVE, set unfrozenAt)
 - [ ] 15.3 Integrate freezeAddons() into handleSubscriptionDeleted() webhook handler
 - [ ] 15.4 Integrate unfreezeAddons() into handleInvoicePaid() webhook handler (when subscription was PAST_DUE)
-- [ ] 15.5 Emit addon.frozen event after freezing add-ons
-- [ ] 15.6 Emit addon.unfrozen event after unfreezing add-ons
+- [ ] 15.5 Write `addon.frozen` event to Outbox within the `BillingUoW` transaction
+- [ ] 15.6 Write `addon.unfrozen` event to Outbox within the `BillingUoW` transaction
 - [ ] 15.7 Write unit tests for freeze/unfreeze logic
 
 ## 16. Downgrade Orchestration
 
 - [ ] 16.1 Implement downgradeToFree() method in billing.service.ts
 - [ ] 16.2 Implement Stripe Free subscription creation before DB transaction (as per design decision)
-- [ ] 16.3 Implement DB transaction: cancel Pro subscription, insert Free subscription, freeze add-on CreditBalance (source=ADDON), create MONTHLY CreditBalance for Free plan
+- [ ] 16.3 Implement `BillingUoW` transaction: cancel Pro subscription, insert Free subscription, freeze add-on CreditBalance (source=ADDON), create MONTHLY CreditBalance for Free plan
 - [ ] 16.4 Implement error handling for Stripe failure during downgrade (return 500 to webhook)
 - [ ] 16.5 Implement error handling for DB transaction failure (log orphaned Stripe subscription)
-- [ ] 16.6 Emit subscription.downgraded event after successful downgrade
+- [ ] 16.6 Write `subscription.downgraded` event to Outbox within the downgrade transaction
 - [ ] 16.7 Write unit tests for downgrade orchestration
 - [ ] 16.8 Write integration test for full downgrade flow (webhook → Stripe → DB transaction)
 
 ## 17. Event Emission
 
-- [ ] 17.1 Inject EventEmitter2 into billing.service.ts
-- [ ] 17.2 Emit subscription.created event when Free subscription is created (registration or background job)
-- [ ] 17.3 Emit subscription.cancelled event when subscription is cancelled
-- [ ] 17.4 Emit subscription.downgraded event when user downgrades to Free
-- [ ] 17.5 Emit subscription.renewed event when invoice.paid webhook is processed
-- [ ] 17.6 Emit subscription.payment_failed event when invoice.payment_failed webhook is processed
-- [ ] 17.7 Emit subscription.recovered event when invoice.paid webhook detects PAST_DUE subscription
-- [ ] 17.8 Emit addon.purchased event when payment_intent.succeeded webhook creates add-on purchase
-- [ ] 17.9 Emit addon.frozen event when add-ons are frozen (during downgrade)
-- [ ] 17.10 Emit addon.unfrozen event when add-ons are unfrozen (during recovery)
-- [ ] 17.11 Write unit tests to verify events are emitted with correct payloads
+- [ ] 17.1 Integrate `BillingOutboxWriter` with `BillingUoW` (e.g. expose it in `BillingRepoFactory` or inject it into services that use UoW)
+- [ ] 17.2 Write `subscription.created` event to Outbox when Free subscription is created (registration or background job)
+- [ ] 17.3 Write `subscription.cancelled` event to Outbox when subscription is cancelled
+- [ ] 17.4 Write `subscription.downgraded` event to Outbox when user downgrades to Free
+- [ ] 17.5 Write `subscription.renewed` event to Outbox when invoice.paid webhook is processed
+- [ ] 17.6 Write `subscription.payment_failed` event to Outbox when invoice.payment_failed webhook is processed
+- [ ] 17.7 Write `subscription.recovered` event to Outbox when invoice.paid webhook detects PAST_DUE subscription
+- [ ] 17.8 Write `addon.purchased` event to Outbox when payment_intent.succeeded webhook creates add-on purchase
+- [ ] 17.9 Write `addon.frozen` event to Outbox when add-ons are frozen (during downgrade)
+- [ ] 17.10 Write `addon.unfrozen` event to Outbox when add-ons are unfrozen (during recovery)
+- [ ] 17.11 Implement consumer listeners to process these events from `EventEmitter2` and insert into `BillingInbox` for idempotency
+- [ ] 17.12 Write unit tests to verify events are written to Outbox and Inbox correctly
 
 ## 18. Testing and Verification
 

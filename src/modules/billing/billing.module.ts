@@ -17,6 +17,7 @@ import { InvoicePaidListener } from '@/modules/billing/listeners/invoice-paid.li
 import { InvoicePaymentFailedListener } from '@/modules/billing/listeners/invoice-payment-failed.listener';
 import { SubscriptionDeletedListener } from '@/modules/billing/listeners/subscription-deleted.listener';
 import { PaymentIntentSucceededListener } from '@/modules/billing/listeners/payment-intent-succeeded.listener';
+import { UserRegisteredListener } from '@/modules/billing/listeners/user-registered.listener';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PaymentIntentSucceededListener } from '@/modules/billing/listeners/paym
     InvoicePaymentFailedListener,
     SubscriptionDeletedListener,
     PaymentIntentSucceededListener,
+    UserRegisteredListener,
     BillingUoW,
   ],
   exports: [BillingService],

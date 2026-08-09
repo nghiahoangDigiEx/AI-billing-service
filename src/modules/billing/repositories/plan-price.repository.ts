@@ -23,6 +23,10 @@ export class PlanPriceRepository {
     return this.tx.planPrice.findUnique({ where: { id } });
   }
 
+  async findByStripePriceId(stripePriceId: string) {
+    return this.tx.planPrice.findUnique({ where: { stripePriceId } });
+  }
+
   async countActivePrices(planId: string) {
     return this.tx.planPrice.count({
       where: {

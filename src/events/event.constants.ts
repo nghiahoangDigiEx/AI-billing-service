@@ -1,5 +1,6 @@
 export const USER_REGISTERED = 'user.registered';
 export const USER_REGISTERED_SUCCESS = 'user.registered.success';
+export const STRIPE_SETUP_SUCCESS = 'stripe.setup.success';
 
 // Subscription events
 export const SUBSCRIPTION_CREATED = 'subscription.created';

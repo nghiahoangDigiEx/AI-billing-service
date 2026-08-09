@@ -9,7 +9,7 @@ import { BillingCreditBalanceRepository } from './repositories/billing-credit-ba
 import { BillingUserRepository } from './repositories/billing-user.repository';
 
 export class BillingRepoFactory {
-  constructor(private readonly tx: Prisma.TransactionClient) {}
+  constructor(public readonly tx: Prisma.TransactionClient) {}
 
   get plan() {
     return new PlanRepository(this.tx);
