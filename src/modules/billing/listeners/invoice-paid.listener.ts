@@ -8,7 +8,7 @@ import { INVOICE_PAID } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
 import type { InvoicePaidPayload } from '@/events/payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
-import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class InvoicePaidListener {
@@ -17,7 +17,7 @@ export class InvoicePaidListener {
   constructor(
     private prisma: PrismaService,
     private readonly outboxWriter: BillingOutboxWriter,
-    private readonly relay: OutboxRelay,
+    private readonly relay: BillingOutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.INVOICE_PAID)

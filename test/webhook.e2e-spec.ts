@@ -5,13 +5,9 @@ import { AppModule } from '@/app.module';
 import { PrismaService } from '@/prisma/prisma.service';
 import { StripeWebhookStrategy } from '@/modules/stripe/strategies/stripe-webhook.strategy';
 import { StripeWebhookService } from '@/modules/stripe/services/stripe-webhook.service';
-import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
-import {
-  BillingOutboxStatus,
-  CreditSource,
-  SubscriptionStatus,
-} from '@prisma/client';
+import { OutboxStatus, CreditSource, SubscriptionStatus } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 jest.setTimeout(30000);
@@ -21,7 +17,7 @@ describe('WebhookController (e2e)', () => {
   let prisma: PrismaService;
   let stripeWebhookStrategy: StripeWebhookStrategy;
   let stripeWebhookService: StripeWebhookService;
-  let outboxRelay: OutboxRelay;
+  let outboxRelay: BillingOutboxRelay;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -37,7 +33,7 @@ describe('WebhookController (e2e)', () => {
       StripeWebhookStrategy,
     );
     stripeWebhookService = app.get<StripeWebhookService>(StripeWebhookService);
-    outboxRelay = app.get<OutboxRelay>(OutboxRelay);
+    outboxRelay = app.get<BillingOutboxRelay>(BillingOutboxRelay);
 
     // Clean up DB before test
     await prisma.eventDlq.deleteMany();
@@ -211,7 +207,7 @@ describe('WebhookController (e2e)', () => {
         where: { eventId },
       });
       expect(outbox).not.toBeNull();
-      expect(outbox?.status).toBe(BillingOutboxStatus.PROCESSED);
+      expect(outbox?.status).toBe(OutboxStatus.PROCESSED);
 
       const creditInbox = await prisma.creditInbox.findFirst({
         where: { eventId },

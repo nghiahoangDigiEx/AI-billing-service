@@ -7,7 +7,7 @@ import { ADDON_PURCHASED } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
 import type { AddonPurchasedPayload } from '@/events/payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
-import { OutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 
 @Injectable()
 export class PaymentIntentSucceededListener {
@@ -16,7 +16,7 @@ export class PaymentIntentSucceededListener {
   constructor(
     private prisma: PrismaService,
     private readonly outboxWriter: BillingOutboxWriter,
-    private readonly relay: OutboxRelay,
+    private readonly relay: BillingOutboxRelay,
   ) {}
 
   @OnEvent(PaymentEvents.PAYMENT_INTENT_SUCCEEDED)

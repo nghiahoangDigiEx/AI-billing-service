@@ -1,17 +1,6 @@
-# Webhook Strategy
+# webhook-strategy
 
-## Purpose
-TBD
-
-## Requirements
-
-### Requirement: Event-driven Webhook Processing
-The system SHALL process Stripe webhook events using isolated strategy handlers, avoiding monolithic switch statements.
-
-#### Scenario: Routing a webhook event
-- **WHEN** a webhook event is received by the webhook controller
-- **THEN** it is routed to the appropriate strategy handler based on the event type
-- **AND** the strategy successfully processes the event or safely ignores it if unsupported
+## MODIFIED Requirements
 
 ### Requirement: Invoice-Driven Subscription Management
 The system SHALL upsert subscriptions and manage credits strictly based on invoice payment outcomes, using the `stripeCustomerId` to identify the user. Downstream credit allocation SHALL be delivered through the transactional outbox with at-least-once delivery and consumer idempotency, rather than fire-and-forget in-process events. The webhook processing outcome SHALL reflect completion of webhook handling (subscription write and event persisted to the outbox), not completion of downstream credit provisioning.

@@ -74,12 +74,14 @@ This design introduces the Billing module as the second major domain, establishi
 
 **Rationale:** Stripe is source of truth. If we update locally on API call and then webhook arrives, we risk double-processing or state drift. Webhook-first ensures consistency.
 
-**Idempotency & State Tracking:** `WebhookEvent` table tracks each Stripe event ID with a 3-state machine (`PENDING`, `PROCESSED`, `FAILED`). 
+**Webhook Idempotency:** `WebhookEvent` table tracks each Stripe event ID with a 3-state machine (`PENDING`, `PROCESSED`, `FAILED`). 
 - When an event arrives, insert as `PENDING`.
 - If it already exists as `PROCESSED`, return 200 immediately (idempotent).
 - If it exists as `PENDING`, return 409 to prevent concurrent processing.
 - If it exists as `FAILED`, allow reprocessing.
-- On success, update to `PROCESSED`. On error, update to `FAILED` and save the `errorMessage`. This allows safe retries and better visibility into webhook failures.
+- On success, update to `PROCESSED`. On error, update to `FAILED`.
+
+**Domain Event Idempotency:** For internal cross-module events, the `BillingInbox` table is used. Consumers check and insert the event ID into `BillingInbox` inside the same transaction as their local state updates.
 
 **Webhook events handled:**
 - `invoice.paid` → reset credits based on active plan's monthly allotment (stored in Plan.creditsIncluded)
@@ -121,14 +123,23 @@ This design introduces the Billing module as the second major domain, establishi
 
 **Chosen approach:**
 1. Create Free subscription in Stripe (API call)
-2. If successful: DB transaction (cancel Pro, insert Free sub, freeze add-ons, reset credits)
+2. If successful: DB transaction via `BillingUoW` (cancel Pro, insert Free sub, freeze add-ons, reset credits, and write `subscription.downgraded` to `BillingOutbox`)
 3. If Stripe call fails: return non-200 to Stripe webhook, Stripe retries the event
 
 **Trade-off:** If step 2 fails after step 1 succeeds, we have an orphaned Free subscription in Stripe. Mitigated by reconciliation job that compares local subscriptions to Stripe and flags discrepancies.
 
 ### 8. Module Structure and Event-Driven Communication
 
-**Decision:** Billing module is self-contained. Cross-module communication (billing → credit) happens via EventEmitter2 only. Billing module never imports or calls Credit module services directly.
+**Decision:** Billing module is self-contained. Cross-module communication (billing → credit) relies on `EventEmitter2`, but is wrapped in **Transactional Outbox & Inbox Patterns** to guarantee delivery and idempotency. Billing module never imports or calls Credit module services directly.
+
+**Outbox Pattern (Publisher):**
+- Domain events are NOT emitted directly by the business services.
+- Business writes and corresponding domain events are committed together in the `BillingOutbox` table using `BillingUoW` (Unit of Work).
+- A background `Outbox Relay` reads from `BillingOutbox` and publishes via `EventEmitter2` (with retry mechanisms for At-Least-Once Delivery).
+
+**Inbox Pattern (Consumer):**
+- Event listeners receive events from `EventEmitter2`.
+- To prevent duplicate side effects (since Relay may retry), listeners insert the event ID into `BillingInbox` within the same transaction as their local state updates.
 
 **Events emitted by Billing module:**
 - `subscription.created` → payload: { userId, subscriptionId, planSlug, creditsIncluded }

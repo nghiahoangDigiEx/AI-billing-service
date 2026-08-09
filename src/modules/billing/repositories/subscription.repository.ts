@@ -18,4 +18,8 @@ export class SubscriptionRepository {
       orderBy: { createdAt: SortOrder.DESC },
     });
   }
+
+  async create(data: Prisma.SubscriptionUncheckedCreateInput) {
+    return this.tx.subscription.create({ data });
+  }
 }
