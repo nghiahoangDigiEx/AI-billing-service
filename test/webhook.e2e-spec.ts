@@ -7,8 +7,15 @@ import { StripeWebhookStrategy } from '@/modules/stripe/strategies/stripe-webhoo
 import { StripeWebhookService } from '@/modules/stripe/services/stripe-webhook.service';
 import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 import { ParsedWebhookEvent } from '@/modules/payment/interfaces/webhook-strategy.interface';
-import { OutboxStatus, CreditSource, SubscriptionStatus } from '@prisma/client';
+import {
+  OutboxStatus,
+  CreditSource,
+  SubscriptionStatus,
+  CreditStatus,
+} from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
 
 jest.setTimeout(30000);
 
@@ -20,9 +27,20 @@ describe('WebhookController (e2e)', () => {
   let outboxRelay: BillingOutboxRelay;
 
   beforeAll(async () => {
+    process.env.STRIPE_FREE_PLAN_PRICE_ID = 'price_free';
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(PaymentProviderFactory)
+      .useValue({
+        registerAdapter: jest.fn(),
+        getAdapter: jest.fn().mockReturnValue({
+          createSubscription: jest
+            .fn()
+            .mockResolvedValue({ id: 'stripe_sub_free_mock' }),
+        }),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication({ rawBody: true });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
@@ -307,6 +325,139 @@ describe('WebhookController (e2e)', () => {
         .set('stripe-signature', 'invalid_sig')
         .send({})
         .expect(400);
+    });
+
+    it('should downgrade to free on customer.subscription.deleted', async () => {
+      // 1. Setup Free Plan
+      const freePlan = await prisma.plan.create({
+        data: {
+          stripeProductId: 'prod_free',
+          name: 'Free',
+          slug: PLAN_SLUGS.FREE,
+          creditsIncluded: 10,
+        },
+      });
+      await prisma.planPrice.create({
+        data: {
+          stripePriceId: 'price_free',
+          planId: freePlan.id,
+          billingInterval: 'MONTH',
+          amount: 0,
+          currency: 'usd',
+        },
+      });
+
+      // 2. Setup Pro User
+      const user = await prisma.user.create({
+        data: {
+          email: 'downgrade-user@example.com',
+          password: 'password123',
+          stripeCustomerId: 'cus_downgrade_1',
+        },
+      });
+
+      const proPlan = await prisma.plan.create({
+        data: {
+          stripeProductId: 'prod_pro',
+          name: 'Pro',
+          slug: 'pro-downgrade',
+          creditsIncluded: 1000,
+        },
+      });
+
+      const proPrice = await prisma.planPrice.create({
+        data: {
+          stripePriceId: 'price_pro',
+          planId: proPlan.id,
+          billingInterval: 'MONTH',
+          amount: 1000,
+          currency: 'usd',
+        },
+      });
+
+      const proSub = await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          planId: proPlan.id,
+          planPriceId: proPrice.id,
+          stripeSubscriptionId: 'sub_downgrade_1',
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(),
+        },
+      });
+
+      // 3. Setup Addon Credits
+      const addonCredits = await prisma.creditBalance.create({
+        data: {
+          userId: user.id,
+          source: CreditSource.ADDON,
+          sourceRef: 'addon_purchase_1',
+          totalCredits: 50,
+          remainingCredits: 50,
+          status: CreditStatus.ACTIVE,
+          periodStart: new Date(),
+          periodEnd: new Date(),
+        },
+      });
+
+      // 4. Send Webhook
+      const eventId = `evt_sub_deleted_${randomUUID()}`;
+      const mockEvent = {
+        id: eventId,
+        type: 'customer.subscription.deleted',
+        data: {
+          id: 'sub_downgrade_1',
+        },
+      };
+
+      jest
+        .spyOn(stripeWebhookStrategy, 'parseEvent')
+        .mockReturnValue(mockEvent as unknown as ParsedWebhookEvent);
+
+      const handleEventSpy = jest.spyOn(stripeWebhookService, 'handleEvent');
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await request(app.getHttpServer())
+        .post('/webhooks/stripe')
+        .set('stripe-signature', 'valid_sig')
+        .send(mockEvent)
+        .expect(200);
+
+      await handleEventSpy.mock.results[handleEventSpy.mock.results.length - 1]
+        .value;
+      await outboxRelay.processPendingEvents();
+
+      // 5. Verify DB State
+      const updatedProSub = await prisma.subscription.findUnique({
+        where: { id: proSub.id },
+      });
+      expect(updatedProSub?.status).toBe(SubscriptionStatus.CANCELLED);
+
+      const newFreeSub = await prisma.subscription.findFirst({
+        where: {
+          userId: user.id,
+          status: SubscriptionStatus.ACTIVE,
+          planId: freePlan.id,
+        },
+      });
+      expect(newFreeSub).not.toBeNull();
+
+      const frozenAddon = await prisma.creditBalance.findUnique({
+        where: { id: addonCredits.id },
+      });
+      expect(frozenAddon?.status).toBe(CreditStatus.FROZEN);
+
+      const newFreeCredits = await prisma.creditBalance.findFirst({
+        where: {
+          userId: user.id,
+          source: CreditSource.MONTHLY,
+          status: CreditStatus.ACTIVE,
+          sourceRef: newFreeSub!.id,
+        },
+      });
+      expect(newFreeCredits).not.toBeNull();
+      expect(newFreeCredits?.totalCredits).toBe(10);
     });
   });
 });

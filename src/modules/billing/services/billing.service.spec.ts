@@ -6,7 +6,11 @@ import { PaymentProviderFactory } from '@/modules/payment/factories/payment-prov
 import { PaymentProviderAdapter } from '@/modules/payment/interfaces/payment-provider-adapter.interface';
 import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 import { SubscriptionInterval } from '@/modules/payment/enums/subscription-interval.enum';
-import { BillingInterval } from '@prisma/client';
+import { BillingInterval, SubscriptionStatus } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import { CONFIG_KEYS } from '@/common/constants/config.constants';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -27,11 +31,15 @@ describe('BillingService', () => {
     countActivePrices: jest.fn(),
     create: jest.fn(),
     updateStatus: jest.fn(),
+    findByStripePriceId: jest.fn(),
   };
 
   const mockCreditBalanceRepo = {
     findUserAddonPurchases: jest.fn(),
     findUserAddonHistory: jest.fn(),
+    freezeActiveAddons: jest.fn(),
+    unfreezeFrozenAddons: jest.fn(),
+    create: jest.fn(),
   };
 
   const mockAddonPackageRepo = {
@@ -48,6 +56,8 @@ describe('BillingService', () => {
   const mockSubscriptionRepo = {
     findCurrentActive: jest.fn(),
     findHistory: jest.fn(),
+    update: jest.fn(),
+    create: jest.fn(),
   };
 
   const mockRepos = {
@@ -57,6 +67,14 @@ describe('BillingService', () => {
     addonPackage: mockAddonPackageRepo,
     user: mockUserRepo,
     subscription: mockSubscriptionRepo,
+    tx: {
+      subscription: {
+        update: jest.fn(),
+      },
+      creditBalance: {
+        create: jest.fn(),
+      },
+    },
   };
 
   const mockBillingUoW = {
@@ -70,6 +88,7 @@ describe('BillingService', () => {
 
   let paymentProviderFactory: PaymentProviderFactory;
   let paymentAdapter: PaymentProviderAdapter;
+  let outboxWriter: BillingOutboxWriter;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -92,6 +111,24 @@ describe('BillingService', () => {
             }),
           },
         },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key) => {
+              if (key === CONFIG_KEYS.STRIPE_FREE_PLAN_PRICE_ID)
+                return 'price_free_123';
+              return null;
+            }),
+          },
+        },
+        {
+          provide: BillingOutboxWriter,
+          useValue: { insert: jest.fn() },
+        },
+        {
+          provide: BillingOutboxRelay,
+          useValue: { kick: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -101,6 +138,7 @@ describe('BillingService', () => {
       PaymentProviderFactory,
     );
     paymentAdapter = paymentProviderFactory.getAdapter(PaymentProvider.STRIPE);
+    outboxWriter = module.get<BillingOutboxWriter>(BillingOutboxWriter);
   });
 
   describe('createPlan', () => {
@@ -652,6 +690,71 @@ describe('BillingService', () => {
       expect(mockCreditBalanceRepo.findUserAddonHistory).toHaveBeenCalledWith(
         'user_1',
       );
+    });
+  });
+
+  describe('freezeAddons', () => {
+    it('should freeze active addons and write event', async () => {
+      mockCreditBalanceRepo.freezeActiveAddons.mockResolvedValue({ count: 2 });
+
+      const result = await service.freezeAddons('user_123');
+
+      expect(result.count).toBe(2);
+      expect(mockCreditBalanceRepo.freezeActiveAddons).toHaveBeenCalledWith(
+        'user_123',
+      );
+      expect(outboxWriter.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('unfreezeAddons', () => {
+    it('should unfreeze frozen addons and write event', async () => {
+      mockCreditBalanceRepo.unfreezeFrozenAddons.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.unfreezeAddons('user_123');
+
+      expect(result.count).toBe(1);
+      expect(mockCreditBalanceRepo.unfreezeFrozenAddons).toHaveBeenCalledWith(
+        'user_123',
+      );
+      expect(outboxWriter.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe('downgradeToFree', () => {
+    it('should orchestrate downgrade correctly', async () => {
+      const mockUser = { id: 'user_123', stripeCustomerId: 'cus_123' };
+      const mockActiveSub = { id: 'sub_123' };
+      const mockPlanPrice = { planId: 'plan_free' };
+      const mockFreePlan = { id: 'plan_free', creditsIncluded: 100 };
+
+      mockUserRepo.findById.mockResolvedValue(mockUser);
+      (paymentAdapter.createSubscription as jest.Mock).mockResolvedValue({
+        id: 'stripe_sub_free',
+      });
+      mockSubscriptionRepo.findCurrentActive.mockResolvedValue(mockActiveSub);
+      mockPlanPriceRepo.findByStripePriceId.mockResolvedValue(mockPlanPrice);
+      mockPlanRepo.findById.mockResolvedValue(mockFreePlan);
+      mockSubscriptionRepo.create.mockResolvedValue({ id: 'new_sub_123' });
+
+      await service.downgradeToFree('user_123', 'old_stripe_sub');
+
+      expect(paymentAdapter.createSubscription).toHaveBeenCalledWith(
+        'cus_123',
+        'price_free_123',
+      );
+      expect(mockRepos.tx.subscription.update).toHaveBeenCalledWith({
+        where: { id: 'sub_123' },
+        data: { status: SubscriptionStatus.CANCELLED },
+      });
+      expect(mockSubscriptionRepo.create).toHaveBeenCalled();
+      expect(mockCreditBalanceRepo.freezeActiveAddons).toHaveBeenCalledWith(
+        'user_123',
+      );
+      expect(mockRepos.tx.creditBalance.create).toHaveBeenCalled();
+      expect(outboxWriter.insert).toHaveBeenCalled();
     });
   });
 });

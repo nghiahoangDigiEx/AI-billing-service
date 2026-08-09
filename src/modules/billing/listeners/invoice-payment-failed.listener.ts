@@ -6,7 +6,7 @@ import type { InvoicePaymentFailedEvent } from '@/events/payment.events';
 import { SubscriptionStatus } from '@prisma/client';
 import { SUBSCRIPTION_PAYMENT_FAILED } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
-import type { SubscriptionPaymentFailedPayload } from '@/events/payloads';
+import type { SubscriptionPaymentFailedPayload } from '@/events/payloads/billing-payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
 import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 

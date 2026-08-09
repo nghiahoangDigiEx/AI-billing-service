@@ -8,6 +8,7 @@ import {
 } from '../interfaces/event-publisher.interface';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { OutboxRepository } from './outbox.repository';
 import { createDomainEvent } from '@/events/domain-event';
 import { INVOICE_PAID } from '@/events/event.constants';
 import type { InvoicePaidPayload } from '@/events/payloads';
@@ -63,6 +64,7 @@ describe('BillingOutboxRelay', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingOutboxRelay,
+        OutboxRepository,
         {
           provide: PrismaService,
           useValue: mockPrisma,
@@ -212,7 +214,7 @@ describe('BillingOutboxRelay', () => {
         }),
       });
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
-        where: { id: 'outbox_1' },
+        where: { eventId: 'event_123' },
         data: expect.objectContaining({
           status: OutboxStatus.DEAD_LETTERED,
           lockedAt: null,
@@ -238,7 +240,7 @@ describe('BillingOutboxRelay', () => {
 
       expect(mockPrisma.eventDlq.create).toHaveBeenCalled();
       expect(mockPrisma.billingOutbox.update).toHaveBeenCalledWith({
-        where: { id: 'outbox_1' },
+        where: { eventId: 'event_123' },
         data: expect.objectContaining({
           status: OutboxStatus.DEAD_LETTERED,
         }),

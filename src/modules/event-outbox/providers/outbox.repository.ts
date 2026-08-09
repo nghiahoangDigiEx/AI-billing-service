@@ -110,7 +110,7 @@ export class OutboxRepository {
 
       if (modelName === 'billingOutbox') {
         await tx.billingOutbox.update({
-          where: { id: event.id },
+          where: { eventId: event.id },
           data: {
             status: OutboxStatus.DEAD_LETTERED,
             lockedAt: null,
@@ -119,7 +119,7 @@ export class OutboxRepository {
         });
       } else {
         await tx.userOutbox.update({
-          where: { id: event.id },
+          where: { eventId: event.id },
           data: {
             status: OutboxStatus.DEAD_LETTERED,
             lockedAt: null,

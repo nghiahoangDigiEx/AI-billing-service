@@ -6,14 +6,18 @@ import {
   INVOICE_PAID,
   ADDON_PURCHASED,
   SUBSCRIPTION_PAYMENT_FAILED,
-  SUBSCRIPTION_DELETED,
+  SUBSCRIPTION_DOWNGRADED,
+  SUBSCRIPTION_CREATED,
+  SUBSCRIPTION_RECOVERED,
 } from '@/events/event.constants';
 import type {
   InvoicePaidPayload,
   AddonPurchasedPayload,
   SubscriptionPaymentFailedPayload,
-  SubscriptionDeletedPayload,
-} from '@/events/payloads';
+  SubscriptionDowngradedPayload,
+  SubscriptionCreatedPayload,
+  SubscriptionRecoveredPayload,
+} from '@/events/payloads/billing-payloads';
 
 @Injectable()
 export class CreditProvisioningListener {
@@ -80,21 +84,21 @@ export class CreditProvisioningListener {
     );
   }
 
-  @OnEvent(SUBSCRIPTION_DELETED)
-  async handleSubscriptionDeleted(
-    event: DomainEvent<SubscriptionDeletedPayload>,
+  @OnEvent(SUBSCRIPTION_DOWNGRADED)
+  async handleSubscriptionDowngraded(
+    event: DomainEvent<SubscriptionDowngradedPayload>,
   ): Promise<void> {
     const payload = event.payload;
 
     this.logger.log(
-      `Processing subscription.deleted event ${event.id} for user ${payload.userId}`,
+      `Processing subscription.downgraded event ${event.id} for user ${payload.userId}`,
     );
 
     await this.creditService.freezeAddonCredits(
       event.id,
       event.type,
       payload.userId,
-      payload.sourceRef,
+      payload.newSubscriptionId,
     );
 
     await this.creditService.provisionMonthlyCredits({
@@ -102,10 +106,51 @@ export class CreditProvisioningListener {
       eventType: event.type,
       userId: payload.userId,
       creditsIncluded: payload.freePlanCredits,
-      periodStart: payload.periodStart,
-      periodEnd: payload.periodEnd,
-      sourceRef: payload.sourceRef,
+      periodStart: new Date(),
+      periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)), // Rough estimate, webhook corrects this
+      sourceRef: payload.newSubscriptionId,
       planSlug: 'free',
     });
+  }
+
+  @OnEvent(SUBSCRIPTION_CREATED)
+  async handleSubscriptionCreated(
+    event: DomainEvent<SubscriptionCreatedPayload>,
+  ): Promise<void> {
+    const payload = event.payload;
+
+    this.logger.log(
+      `Processing subscription.created event ${event.id} for user ${payload.userId}`,
+    );
+
+    // In a real app we'd fetch the free plan credits from DB. For now, hardcode or fetch.
+    await this.creditService.provisionMonthlyCredits({
+      eventId: event.id,
+      eventType: event.type,
+      userId: payload.userId,
+      creditsIncluded: 100, // Assuming 100 for Free plan
+      periodStart: new Date(),
+      periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      sourceRef: event.id,
+      planSlug: 'free',
+    });
+  }
+
+  @OnEvent(SUBSCRIPTION_RECOVERED)
+  async handleSubscriptionRecovered(
+    event: DomainEvent<SubscriptionRecoveredPayload>,
+  ): Promise<void> {
+    const payload = event.payload;
+
+    this.logger.log(
+      `Processing subscription.recovered event ${event.id} for user ${payload.userId}`,
+    );
+
+    await this.creditService.unfreezeAddonCredits(
+      event.id,
+      event.type,
+      payload.userId,
+      payload.sourceRef,
+    );
   }
 }

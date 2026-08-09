@@ -15,6 +15,11 @@ import { BillingOutboxWriter } from './services/billing-outbox-writer.service';
       useClass: InProcessPublisher,
     },
   ],
-  exports: [BillingOutboxWriter, BillingOutboxRelay, EVENT_PUBLISHER],
+  exports: [
+    BillingOutboxWriter,
+    BillingOutboxRelay,
+    EVENT_PUBLISHER,
+    OutboxRepository,
+  ],
 })
 export class EventOutboxModule {}

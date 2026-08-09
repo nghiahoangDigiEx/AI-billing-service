@@ -25,3 +25,26 @@ export interface SubscriptionDeletedPayload {
   periodEnd: Date;
   sourceRef: string;
 }
+
+export interface SubscriptionCreatedPayload {
+  userId: string;
+  stripeCustomerId: string;
+}
+
+export interface SubscriptionDowngradedPayload {
+  userId: string;
+  freePlanCredits: number;
+  newSubscriptionId: string;
+}
+
+export interface SubscriptionRecoveredPayload {
+  userId: string;
+  sourceRef: string;
+}
+
+export interface SubscriptionRenewedPayload {
+  userId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  sourceRef: string;
+}

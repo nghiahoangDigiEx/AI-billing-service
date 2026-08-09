@@ -191,58 +191,58 @@
 
 ## 15. Add-on Freeze/Unfreeze Logic
 
-- [ ] 15.1 Implement freezeAddons() method in billing.service.ts (update CreditBalance where source=ADDON AND status=ACTIVE to FROZEN, set frozenAt)
-- [ ] 15.2 Implement unfreezeAddons() method in billing.service.ts (update CreditBalance where source=ADDON AND status=FROZEN to ACTIVE, set unfrozenAt)
-- [ ] 15.3 Integrate freezeAddons() into handleSubscriptionDeleted() webhook handler
-- [ ] 15.4 Integrate unfreezeAddons() into handleInvoicePaid() webhook handler (when subscription was PAST_DUE)
-- [ ] 15.5 Write `addon.frozen` event to Outbox within the `BillingUoW` transaction
-- [ ] 15.6 Write `addon.unfrozen` event to Outbox within the `BillingUoW` transaction
-- [ ] 15.7 Write unit tests for freeze/unfreeze logic
+- [x] 15.1 Implement freezeAddons() method in billing.service.ts (update CreditBalance where source=ADDON AND status=ACTIVE to FROZEN, set frozenAt)
+- [x] 15.2 Implement unfreezeAddons() method in billing.service.ts (update CreditBalance where source=ADDON AND status=FROZEN to ACTIVE, set unfrozenAt)
+- [x] 15.3 Integrate freezeAddons() into handleSubscriptionDeleted() webhook handler
+- [x] 15.4 Integrate unfreezeAddons() into handleInvoicePaid() webhook handler (when subscription was PAST_DUE)
+- [x] 15.5 Write `addon.frozen` event to Outbox within the `BillingUoW` transaction
+- [x] 15.6 Write `addon.unfrozen` event to Outbox within the `BillingUoW` transaction
+- [x] 15.7 Write unit tests for freeze/unfreeze logic
 
 ## 16. Downgrade Orchestration
 
-- [ ] 16.1 Implement downgradeToFree() method in billing.service.ts
-- [ ] 16.2 Implement Stripe Free subscription creation before DB transaction (as per design decision)
-- [ ] 16.3 Implement `BillingUoW` transaction: cancel Pro subscription, insert Free subscription, freeze add-on CreditBalance (source=ADDON), create MONTHLY CreditBalance for Free plan
-- [ ] 16.4 Implement error handling for Stripe failure during downgrade (return 500 to webhook)
-- [ ] 16.5 Implement error handling for DB transaction failure (log orphaned Stripe subscription)
-- [ ] 16.6 Write `subscription.downgraded` event to Outbox within the downgrade transaction
-- [ ] 16.7 Write unit tests for downgrade orchestration
-- [ ] 16.8 Write integration test for full downgrade flow (webhook → Stripe → DB transaction)
+- [x] 16.1 Implement downgradeToFree() method in billing.service.ts
+- [x] 16.2 Implement Stripe Free subscription creation before DB transaction (as per design decision)
+- [x] 16.3 Implement `BillingUoW` transaction: cancel Pro subscription, insert Free subscription, freeze add-on CreditBalance (source=ADDON), create MONTHLY CreditBalance for Free plan
+- [x] 16.4 Implement error handling for Stripe failure during downgrade (return 500 to webhook)
+- [x] 16.5 Implement error handling for DB transaction failure (log orphaned Stripe subscription)
+- [x] 16.6 Write `subscription.downgraded` event to Outbox within the downgrade transaction
+- [x] 16.7 Write unit tests for downgrade orchestration
+- [x] 16.8 Write integration test for full downgrade flow (webhook → Stripe → DB transaction)
 
 ## 17. Event Emission
 
-- [ ] 17.1 Integrate `BillingOutboxWriter` with `BillingUoW` (e.g. expose it in `BillingRepoFactory` or inject it into services that use UoW)
-- [ ] 17.2 Write `subscription.created` event to Outbox when Free subscription is created (registration or background job)
-- [ ] 17.3 Write `subscription.cancelled` event to Outbox when subscription is cancelled
-- [ ] 17.4 Write `subscription.downgraded` event to Outbox when user downgrades to Free
-- [ ] 17.5 Write `subscription.renewed` event to Outbox when invoice.paid webhook is processed
-- [ ] 17.6 Write `subscription.payment_failed` event to Outbox when invoice.payment_failed webhook is processed
-- [ ] 17.7 Write `subscription.recovered` event to Outbox when invoice.paid webhook detects PAST_DUE subscription
-- [ ] 17.8 Write `addon.purchased` event to Outbox when payment_intent.succeeded webhook creates add-on purchase
-- [ ] 17.9 Write `addon.frozen` event to Outbox when add-ons are frozen (during downgrade)
-- [ ] 17.10 Write `addon.unfrozen` event to Outbox when add-ons are unfrozen (during recovery)
-- [ ] 17.11 Implement consumer listeners to process these events from `EventEmitter2` and insert into `BillingInbox` for idempotency
-- [ ] 17.12 Write unit tests to verify events are written to Outbox and Inbox correctly
+- [x] 17.1 Integrate `BillingOutboxWriter` with `BillingUoW` (e.g. expose it in `BillingRepoFactory` or inject it into services that use UoW)
+- [x] 17.2 Write `subscription.created` event to Outbox when Free subscription is created (registration or background job)
+- [x] 17.3 Write `subscription.cancelled` event to Outbox when subscription is cancelled
+- [x] 17.4 Write `subscription.downgraded` event to Outbox when user downgrades to Free
+- [x] 17.5 Write `subscription.renewed` event to Outbox when invoice.paid webhook is processed
+- [x] 17.6 Write `subscription.payment_failed` event to Outbox when invoice.payment_failed webhook is processed
+- [x] 17.7 Write `subscription.recovered` event to Outbox when invoice.paid webhook detects PAST_DUE subscription
+- [x] 17.8 Write `addon.purchased` event to Outbox when payment_intent.succeeded webhook creates add-on purchase
+- [x] 17.9 Write `addon.frozen` event to Outbox when add-ons are frozen (during downgrade)
+- [x] 17.10 Write `addon.unfrozen` event to Outbox when add-ons are unfrozen (during recovery)
+- [x] 17.11 Implement consumer listeners to process these events from `EventEmitter2` and insert into `BillingInbox` for idempotency
+- [x] 17.12 Write unit tests to verify events are written to Outbox and Inbox correctly
 
 ## 18. Testing and Verification
 
-- [ ] 18.1 Run npm run lint and fix any linting errors
-- [ ] 18.2 Run npm run typecheck and fix any type errors
-- [ ] 18.3 Run npm run test and ensure all unit tests pass
-- [ ] 18.4 Run npm run test:e2e and ensure all integration tests pass
-- [ ] 18.5 Run npm run build and ensure application compiles successfully
-- [ ] 18.6 Run npx prisma validate and ensure schema is valid
-- [ ] 18.7 Test admin plan creation flow end-to-end (create plan, verify Stripe Product and Price created)
-- [ ] 18.8 Test admin add-on creation flow end-to-end (create add-on, verify Stripe Product and Price created)
-- [ ] 18.9 Test user registration flow with Stripe mock (verify Free subscription created)
-- [ ] 18.10 Test user upgrade flow with Stripe mock (verify subscription upgrade)
-- [ ] 18.11 Test webhook processing with Stripe mock (verify invoice.paid, payment_failed, subscription.deleted, payment_intent.succeeded)
-- [ ] 18.12 Test add-on purchase flow with Stripe mock (verify PaymentIntent created with metadata)
-- [ ] 18.13 Test downgrade flow with Stripe mock (verify Pro cancelled, Free created, add-on CreditBalance frozen, MONTHLY CreditBalance created for Free)
-- [ ] 18.14 Test background job with Stripe mock (verify pending users are processed)
-- [ ] 18.15 Test CreditBalance creation and consumption logic
-- [ ] 18.16 Test freeze/unfreeze logic on CreditBalance records
+- [x] 18.1 Run npm run lint and fix any linting errors
+- [x] 18.2 Run npm run typecheck and fix any type errors
+- [x] 18.3 Run npm run test and ensure all unit tests pass
+- [x] 18.4 Run npm run test:e2e and ensure all integration tests pass
+- [x] 18.5 Run npm run build and ensure application compiles successfully
+- [x] 18.6 Run npx prisma validate and ensure schema is valid
+- [x] 18.7 Test admin plan creation flow end-to-end (create plan, verify Stripe Product and Price created)
+- [x] 18.8 Test admin add-on creation flow end-to-end (create add-on, verify Stripe Product and Price created)
+- [x] 18.9 Test user registration flow with Stripe mock (verify Free subscription created)
+- [x] 18.10 Test user upgrade flow with Stripe mock (verify subscription upgrade)
+- [x] 18.11 Test webhook processing with Stripe mock (verify invoice.paid, payment_failed, subscription.deleted, payment_intent.succeeded)
+- [x] 18.12 Test add-on purchase flow with Stripe mock (verify PaymentIntent created with metadata)
+- [x] 18.13 Test downgrade flow with Stripe mock (verify Pro cancelled, Free created, add-on CreditBalance frozen, MONTHLY CreditBalance created for Free)
+- [x] 18.14 Test background job with Stripe mock (verify pending users are processed)
+- [x] 18.15 Test CreditBalance creation and consumption logic
+- [x] 18.16 Test freeze/unfreeze logic on CreditBalance records
 
 ## 19. Documentation
 

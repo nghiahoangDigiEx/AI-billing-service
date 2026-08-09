@@ -5,7 +5,7 @@ import { PaymentEvents } from '@/events/payment.events';
 import type { PaymentIntentSucceededEvent } from '@/events/payment.events';
 import { ADDON_PURCHASED } from '@/events/event.constants';
 import { createDomainEvent } from '@/events/domain-event';
-import type { AddonPurchasedPayload } from '@/events/payloads';
+import type { AddonPurchasedPayload } from '@/events/payloads/billing-payloads';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
 import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 

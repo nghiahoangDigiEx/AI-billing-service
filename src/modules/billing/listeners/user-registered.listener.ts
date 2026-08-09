@@ -6,12 +6,14 @@ import { createDomainEvent } from '@/events/domain-event';
 import { BillingUoW } from '../billing.uow';
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
 import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
-import { StripeAdapter } from '@/modules/stripe/adapters/stripe.adapter';
+import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
+import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
 import { SubscriptionStatus } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '@/common/constants/config.constants';
 
-import { STRIPE_SETUP_SUCCESS } from '@/events/event.constants';
+import { SUBSCRIPTION_CREATED } from '@/events/event.constants';
+import type { SubscriptionCreatedPayload } from '@/events/payloads/billing-payloads';
 
 @Injectable()
 export class UserRegisteredListener {
@@ -21,7 +23,7 @@ export class UserRegisteredListener {
     private readonly uow: BillingUoW,
     private readonly outboxWriter: BillingOutboxWriter,
     private readonly relay: BillingOutboxRelay,
-    private readonly stripeAdapter: StripeAdapter,
+    private readonly paymentFactory: PaymentProviderFactory,
     private readonly configService: ConfigService,
   ) {}
 
@@ -64,9 +66,12 @@ export class UserRegisteredListener {
           );
         }
 
-        const customer = await this.stripeAdapter.createCustomer(email);
+        const paymentAdapter = this.paymentFactory.getAdapter(
+          PaymentProvider.STRIPE,
+        );
+        const customer = await paymentAdapter.createCustomer(email);
 
-        const stripeSub = await this.stripeAdapter.createSubscription(
+        const stripeSub = await paymentAdapter.createSubscription(
           customer.id,
           freePlanPriceId,
         );
@@ -83,8 +88,8 @@ export class UserRegisteredListener {
           ), // Rough estimate, webhook will correct it
         });
 
-        const successEvent = createDomainEvent(
-          STRIPE_SETUP_SUCCESS,
+        const successEvent = createDomainEvent<SubscriptionCreatedPayload>(
+          SUBSCRIPTION_CREATED,
           { userId, stripeCustomerId: customer.id },
           {
             causationId: event.id,

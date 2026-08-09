@@ -1,5 +1,7 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AppException } from '@/common/exceptions';
+import { CONFIG_KEYS } from '@/common/constants/config.constants';
 import { BillingUoW } from '../billing.uow';
 import { PaymentProviderFactory } from '@/modules/payment/factories/payment-provider.factory';
 import { PaymentProvider } from '@/modules/payment/enums/payment-provider.enum';
@@ -11,13 +13,31 @@ import { CreatePlanPriceDto } from '@/modules/billing/dto/create-plan-price.dto'
 import { CreateAddonPackageDto } from '@/modules/billing/dto/create-addon-package.dto';
 import { UpdateAddonPackageDto } from '@/modules/billing/dto/update-addon-package.dto';
 import { ErrorCode } from '@/common/enums/error-code.enum';
-import { PlanStatus } from '@prisma/client';
+import {
+  PlanStatus,
+  SubscriptionStatus,
+  CreditSource,
+  CreditStatus,
+} from '@prisma/client';
+import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
+import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
+import {
+  ADDON_FROZEN,
+  ADDON_UNFROZEN,
+  SUBSCRIPTION_DOWNGRADED,
+} from '@/events/event.constants';
+import { createDomainEvent } from '@/events/domain-event';
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     private readonly uow: BillingUoW,
     private paymentProviderFactory: PaymentProviderFactory,
+    private readonly outboxWriter: BillingOutboxWriter,
+    private readonly relay: BillingOutboxRelay,
+    private readonly configService: ConfigService,
   ) {}
 
   private getPaymentAdapter() {
@@ -401,5 +421,160 @@ export class BillingService {
 
   async getUserAddonHistory(userId: string) {
     return this.uow.readOnly.creditBalance.findUserAddonHistory(userId);
+  }
+
+  async freezeAddons(
+    userId: string,
+    causationId?: string,
+    correlationId?: string,
+  ) {
+    return this.uow.execute(async (repos) => {
+      const result = await repos.creditBalance.freezeActiveAddons(userId);
+
+      if (result.count > 0) {
+        const domainEvent = createDomainEvent(
+          ADDON_FROZEN,
+          { userId, count: result.count },
+          { causationId, correlationId },
+        );
+        await this.outboxWriter.insert(repos.tx, domainEvent);
+      }
+
+      return result;
+    });
+  }
+
+  async unfreezeAddons(
+    userId: string,
+    causationId?: string,
+    correlationId?: string,
+  ) {
+    return this.uow.execute(async (repos) => {
+      const result = await repos.creditBalance.unfreezeFrozenAddons(userId);
+
+      if (result.count > 0) {
+        const domainEvent = createDomainEvent(
+          ADDON_UNFROZEN,
+          { userId, count: result.count },
+          { causationId, correlationId },
+        );
+        await this.outboxWriter.insert(repos.tx, domainEvent);
+      }
+
+      return result;
+    });
+  }
+
+  async downgradeToFree(
+    userId: string,
+    oldStripeSubscriptionId: string,
+    causationId?: string,
+    correlationId?: string,
+  ) {
+    const user = await this.uow.readOnly.user.findById(userId);
+    if (!user || !user.stripeCustomerId) {
+      this.logger.error(
+        `User or stripe customer id not found for user ${userId}`,
+      );
+      throw new AppException(
+        ErrorCode.NOT_FOUND,
+        'User or stripe customer id not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const freePlanPriceId = this.configService.get<string>(
+      CONFIG_KEYS.STRIPE_FREE_PLAN_PRICE_ID,
+    );
+    if (!freePlanPriceId) {
+      throw new Error('Free plan price not configured');
+    }
+
+    let stripeSubId: string | null = null;
+    try {
+      const freeSub = await this.getPaymentAdapter().createSubscription(
+        user.stripeCustomerId,
+        freePlanPriceId,
+      );
+      stripeSubId = freeSub.id;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create Free Stripe subscription for downgrade:`,
+        error,
+      );
+      throw error;
+    }
+
+    try {
+      await this.uow.execute(async (repos) => {
+        const activeSub = await repos.subscription.findCurrentActive(userId);
+        if (activeSub) {
+          await repos.tx.subscription.update({
+            where: { id: activeSub.id },
+            data: { status: SubscriptionStatus.CANCELLED },
+          });
+        }
+
+        const planPrice =
+          await repos.planPrice.findByStripePriceId(freePlanPriceId);
+
+        if (!planPrice) {
+          throw new Error('Free plan price not found in DB');
+        }
+
+        const freePlan = await repos.plan.findById(planPrice.planId);
+
+        if (!freePlan) {
+          throw new Error('Free plan not found in DB');
+        }
+
+        const periodStart = new Date();
+        const periodEnd = new Date(
+          new Date().setMonth(new Date().getMonth() + 1),
+        );
+
+        const newSub = await repos.subscription.create({
+          userId,
+          planId: freePlan.id,
+          planPriceId: planPrice.id,
+          stripeSubscriptionId: stripeSubId,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: periodStart,
+          currentPeriodEnd: periodEnd,
+        });
+
+        await repos.creditBalance.freezeActiveAddons(userId);
+
+        await repos.tx.creditBalance.create({
+          data: {
+            userId,
+            source: CreditSource.MONTHLY,
+            sourceRef: newSub.id,
+            totalCredits: freePlan.creditsIncluded,
+            remainingCredits: freePlan.creditsIncluded,
+            status: CreditStatus.ACTIVE,
+            periodStart,
+            periodEnd,
+          },
+        });
+
+        const domainEvent = createDomainEvent(
+          SUBSCRIPTION_DOWNGRADED,
+          {
+            userId,
+            freePlanCredits: freePlan.creditsIncluded,
+            newSubscriptionId: newSub.id,
+          },
+          { causationId, correlationId },
+        );
+        await this.outboxWriter.insert(repos.tx, domainEvent);
+      });
+    } catch (error) {
+      this.logger.error(
+        `DB transaction failed during downgrade, orphaned Stripe subscription: ${stripeSubId}`,
+        error,
+      );
+      throw error;
+    }
   }
 }
