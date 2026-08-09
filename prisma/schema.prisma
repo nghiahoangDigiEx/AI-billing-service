@@ -272,3 +272,10 @@ model EventDlq {
 
   @@index([eventId])
 }
+
+model BillingInbox {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  type        String
+  processedAt DateTime @default(now())
+}
