@@ -18,6 +18,7 @@ import type {
   SubscriptionCreatedPayload,
   SubscriptionRecoveredPayload,
 } from '@/events/payloads/billing-payloads';
+import { PLAN_SLUGS } from '@/modules/billing/constants/billing.constants';
 
 @Injectable()
 export class CreditProvisioningListener {
@@ -109,7 +110,7 @@ export class CreditProvisioningListener {
       periodStart: new Date(),
       periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)), // Rough estimate, webhook corrects this
       sourceRef: payload.newSubscriptionId,
-      planSlug: 'free',
+      planSlug: PLAN_SLUGS.FREE,
     });
   }
 
@@ -123,16 +124,15 @@ export class CreditProvisioningListener {
       `Processing subscription.created event ${event.id} for user ${payload.userId}`,
     );
 
-    // In a real app we'd fetch the free plan credits from DB. For now, hardcode or fetch.
     await this.creditService.provisionMonthlyCredits({
       eventId: event.id,
       eventType: event.type,
       userId: payload.userId,
-      creditsIncluded: 100, // Assuming 100 for Free plan
+      creditsIncluded: payload.freePlanCredits,
       periodStart: new Date(),
       periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       sourceRef: event.id,
-      planSlug: 'free',
+      planSlug: PLAN_SLUGS.FREE,
     });
   }
 

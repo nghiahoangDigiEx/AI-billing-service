@@ -29,6 +29,7 @@ export interface SubscriptionDeletedPayload {
 export interface SubscriptionCreatedPayload {
   userId: string;
   stripeCustomerId: string;
+  freePlanCredits: number;
 }
 
 export interface SubscriptionDowngradedPayload {

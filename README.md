@@ -1,128 +1,143 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Billing Service API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Billing Service API managing user authentication, subscriptions, and credit-based consumption with Stripe integration.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
+This project follows an event-driven modular monolith architecture with layered internals.
+- **User Module**: Identity, authentication, authorization, OAuth.
+- **Billing Module**: Stripe integration, subscriptions, payments, add-ons.
+- **Credit Module**: Ledger, monthly resets, consumption, freeze/unfreeze logic.
 
-Billing Service API managing user authentication, subscriptions, and credit-based consumption.
+Cross-module communication is achieved via an **Event Bus** (EventEmitter2) and an **Outbox Pattern** to ensure reliable domain event delivery. Idempotency is guaranteed via the **Inbox Pattern** on the consumer side.
 
 ## Setup Instructions
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### 1. Install dependencies
 
-2. **Environment Variables:**
-   Copy `.env.example` to `.env` and fill in the required values:
-   ```env
-   DATABASE_URL="postgres://user:pass@host:port/db"
-   JWT_SECRET="your-super-secret-jwt-key"
-   JWT_EXPIRES_IN="15m"
-   JWT_REFRESH_SECRET="your-super-secret-refresh-key"
-   JWT_REFRESH_EXPIRES_IN="7d"
-   GOOGLE_CLIENT_ID="google-client-id"
-   GOOGLE_CLIENT_SECRET="google-client-secret"
-   GOOGLE_CALLBACK_URL="http://localhost:3000/auth/google/callback"
-   PORT=3000
-   ```
+```bash
+npm install
+```
 
-3. **Database Setup:**
-   Initialize the database and seed the default admin user (`admin@example.com` / `admin123`).
-   ```bash
-   npx prisma migrate dev
-   npm run seed
-   ```
+### 2. Stripe Configuration
 
-## API Documentation
+1. Log in to your [Stripe Dashboard](https://dashboard.stripe.com/).
+2. Obtain your **Publishable key** and **Secret key** from the Developers API keys section.
+3. Obtain a **Webhook Signing Secret** by setting up a webhook (see Webhook Setup below).
 
-Swagger API documentation is automatically generated and accessible at `/api` when the server is running.
-The authentication flow supports:
-- Traditional Email/Password registration (`/auth/register`) and login (`/auth/login`).
-- Google OAuth2.0 authentication (`/auth/google`).
-- JWT-based protected endpoints with Refresh Token rotation (`/auth/refresh`).
+### 3. Environment Variables
 
-## Compile and run the project
+Copy `.env.example` to `.env` and configure the following variables:
+
+```env
+# Database
+DATABASE_URL="postgres://user:pass@host:port/db"
+
+# Authentication
+JWT_SECRET="your-super-secret-jwt-key"
+JWT_EXPIRES_IN="15m"
+JWT_REFRESH_SECRET="your-super-secret-refresh-key"
+JWT_REFRESH_EXPIRES_IN="7d"
+GOOGLE_CLIENT_ID="google-client-id"
+GOOGLE_CLIENT_SECRET="google-client-secret"
+GOOGLE_CALLBACK_URL="http://localhost:3000/auth/google/callback"
+
+# Application
+PORT=3000
+
+# Stripe Configuration
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_FREE_PLAN_PRICE_ID="price_1..." # Price ID for the default Free plan
+
+# Billing Config
+BILLING_MAX_RETRIES=5 # Max retries for Stripe setup background job
+```
+
+### 4. Database Setup & Seed
+
+Initialize the database and seed the default plans and admin user (`admin@example.com` / `admin123`).
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+npm run seed
+```
+
+### 5. Local Development & Webhooks
+
+To receive Stripe webhooks locally, install the [Stripe CLI](https://stripe.com/docs/stripe-cli) and run:
+
+```bash
+stripe login
+stripe listen --forward-to http://localhost:3000/webhooks/stripe
+```
+
+Use the `whsec_...` secret printed by the CLI as your `STRIPE_WEBHOOK_SECRET` in `.env`.
+
+**Events to enable in Stripe Dashboard (for production webhooks):**
+- `invoice.paid`
+- `invoice.payment_failed`
+- `customer.subscription.deleted`
+- `payment_intent.succeeded`
+
+---
+
+## API Endpoints Summary
+
+Swagger API documentation is accessible at `/api` when the server is running.
+
+### Admin Endpoints (Requires ADMIN role)
+- `POST /admin/plans`: Create a new billing plan (syncs Product/Price to Stripe).
+- `POST /admin/addons`: Create a new credit add-on package (syncs Product/Price to Stripe).
+
+### User Endpoints (Requires Authentication)
+- `GET /subscriptions/my-plan`: View current active subscription and plan details.
+- `POST /subscriptions/upgrade`: Upgrade to a paid plan.
+- `POST /subscriptions/downgrade`: Downgrade to the Free plan.
+- `POST /addons/purchase`: Purchase an add-on (returns Stripe Client Secret to complete payment).
+- `GET /public/plans`: List available subscription plans.
+- `GET /public/addons`: List available add-on packages.
+
+---
+
+## Technical Documentation
+
+### Webhook Event Handling & Idempotency
+Stripe webhooks are processed by the `WebhookController`, verified via signature, and mapped to internal generic events by `StripeWebhookStrategy`.
+Each webhook event triggers a business operation (e.g., `invoice.paid` handles subscription renewal). To guarantee exactly-once processing:
+1. `stripeEventId` is stored in the `WebhookEvent` table within the same transaction as the business operation.
+2. If Stripe delivers the same webhook twice, the database constraint `UNIQUE(stripeEventId)` ensures the second attempt is safely ignored.
+
+### Subscription Lifecycle
+- **Registration**: Users get a default `Free` subscription. A background job (`BillingScheduler`) ensures Stripe Customer and Free Subscription are created.
+- **Upgrade**: Modifies the existing Stripe subscription and updates the local state to `ACTIVE` with the new Plan.
+- **Downgrade**: Cancels the paid Stripe subscription at the end of the billing cycle (or immediately). Local state reflects `Free` once the webhook `customer.subscription.deleted` is received.
+- **Payment Failure**: Webhook `invoice.payment_failed` changes the local state to `PAST_DUE`. Add-ons are frozen.
+- **Recovery**: Webhook `invoice.paid` for a `PAST_DUE` subscription restores the status to `ACTIVE`. Add-ons are unfrozen.
+
+### Add-on Freeze / Unfreeze Behavior
+When a subscription becomes `PAST_DUE` (or user downgrades to Free), any purchased credit add-ons are **frozen** (status changes from `ACTIVE` to `FROZEN`).
+- Frozen credits cannot be consumed by the AI services.
+- If the user recovers their subscription (pays their past-due invoice), the frozen add-ons are automatically **unfrozen** (status reverts to `ACTIVE`) and become available again.
+- This logic is handled securely in `CreditModule` triggered by domain events `subscription.downgraded`, `subscription.payment_failed`, and `subscription.recovered`.
+
+---
+
+## Running the application
 
 ```bash
 # development
-$ npm run start
+npm run start:dev
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# production build
+npm run build
+npm run start:prod
 ```
 
-## Run tests
+## Testing
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run test        # Unit tests
+npm run test:e2e    # Integration & E2E tests
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).

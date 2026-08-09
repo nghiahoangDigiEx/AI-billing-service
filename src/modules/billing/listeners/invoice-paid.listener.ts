@@ -18,6 +18,7 @@ import type {
 import { BillingOutboxWriter } from '@/modules/event-outbox/services/billing-outbox-writer.service';
 import { BillingOutboxRelay } from '@/modules/event-outbox/providers/outbox-relay.service';
 import { BillingService } from '@/modules/billing/services/billing.service';
+import { SortOrder } from '@/common/enums/sort-order.enum';
 
 @Injectable()
 export class InvoicePaidListener {
@@ -98,7 +99,7 @@ export class InvoicePaidListener {
         where: {
           stripeSubscriptionId: event.subscriptionId,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: SortOrder.DESC },
       });
 
       if (

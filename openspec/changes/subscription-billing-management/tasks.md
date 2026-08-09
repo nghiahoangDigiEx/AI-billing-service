@@ -246,14 +246,14 @@
 
 ## 19. Documentation
 
-- [ ] 19.1 Update README.md with Stripe setup instructions (obtain API keys, configure webhook endpoint)
-- [ ] 19.2 Update README.md with webhook configuration instructions (list of events to enable in Stripe Dashboard)
-- [ ] 19.3 Update README.md with environment variable documentation (Stripe keys, billing config)
-- [ ] 19.4 Update README.md with local development instructions (stripe listen command for webhook forwarding)
-- [ ] 19.5 Create API documentation summary for billing endpoints (admin and user-facing)
-- [ ] 19.6 Document webhook event handling and idempotency guarantees
-- [ ] 19.7 Document subscription lifecycle and state transitions
-- [ ] 19.8 Document add-on freeze/unfreeze behavior
+- [x] 19.1 Update README.md with Stripe setup instructions (obtain API keys, configure webhook endpoint)
+- [x] 19.2 Update README.md with webhook configuration instructions (list of events to enable in Stripe Dashboard)
+- [x] 19.3 Update README.md with environment variable documentation (Stripe keys, billing config)
+- [x] 19.4 Update README.md with local development instructions (stripe listen command for webhook forwarding)
+- [x] 19.5 Create API documentation summary for billing endpoints (admin and user-facing)
+- [x] 19.6 Document webhook event handling and idempotency guarantees
+- [x] 19.7 Document subscription lifecycle and state transitions
+- [x] 19.8 Document add-on freeze/unfreeze behavior
 
 ## 20. Seed Data
 

@@ -66,6 +66,11 @@ export class UserRegisteredListener {
           );
         }
 
+        const plan = await repos.plan.findById(planPrice.planId);
+        if (!plan) {
+          throw new Error(`Plan with id ${planPrice.planId} not found`);
+        }
+
         const paymentAdapter = this.paymentFactory.getAdapter(
           PaymentProvider.STRIPE,
         );
@@ -90,7 +95,11 @@ export class UserRegisteredListener {
 
         const successEvent = createDomainEvent<SubscriptionCreatedPayload>(
           SUBSCRIPTION_CREATED,
-          { userId, stripeCustomerId: customer.id },
+          {
+            userId,
+            stripeCustomerId: customer.id,
+            freePlanCredits: plan.creditsIncluded,
+          },
           {
             causationId: event.id,
             correlationId: event.metadata.correlationId,
